@@ -5,6 +5,7 @@ import { fetchUserPermissions } from '@/lib/auth/permissions'
 import { ModuleName } from '@/lib/auth/permission-constants'
 import Link from 'next/link'
 import { logout } from '@/lib/actions/auth'
+import AutoLogout from '@/components/layout/AutoLogout'
 
 export default async function ControlPanelLayout({
   children,
@@ -24,7 +25,7 @@ export default async function ControlPanelLayout({
   const adminClient = getSupabaseAdmin()
   const { data: profile } = await adminClient
     .from('staff_profiles')
-    .select('status, requires_password_change, staff_id')
+    .select('status, requires_password_change, staff_id, first_name, last_name')
     .eq('id', user.id)
     .single()
 
@@ -95,22 +96,22 @@ export default async function ControlPanelLayout({
           
           {/* Dynamic Modules based on permissions */}
           {canAccess('leads_clients') && (
-            <Link href="/control-panel/leads" style={sidebarLinkStyle}>
+            <Link href="/control-panel/modules/leads-clients" style={sidebarLinkStyle}>
               Leads & Clients
             </Link>
           )}
           {canAccess('site_management') && (
-            <Link href="/control-panel/site" style={sidebarLinkStyle}>
+            <Link href="/control-panel/modules/site-management" style={sidebarLinkStyle}>
               Site Management
             </Link>
           )}
           {canAccess('products') && (
-            <Link href="/control-panel/products" style={sidebarLinkStyle}>
+            <Link href="/control-panel/modules/products" style={sidebarLinkStyle}>
               Products
             </Link>
           )}
           {canAccess('insights') && (
-            <Link href="/control-panel/insights" style={sidebarLinkStyle}>
+            <Link href="/control-panel/modules/insights" style={sidebarLinkStyle}>
               Insights
             </Link>
           )}
@@ -120,12 +121,12 @@ export default async function ControlPanelLayout({
             </Link>
           )}
           {canAccess('careers') && (
-            <Link href="/control-panel/careers" style={sidebarLinkStyle}>
+            <Link href="/control-panel/modules/careers" style={sidebarLinkStyle}>
               Careers
             </Link>
           )}
           {canAccess('media_library') && (
-            <Link href="/control-panel/media" style={sidebarLinkStyle}>
+            <Link href="/control-panel/modules/media-library" style={sidebarLinkStyle}>
               Media Library
             </Link>
           )}
@@ -205,7 +206,7 @@ export default async function ControlPanelLayout({
           zIndex: 9
         }}>
           <div style={{ fontSize: 'var(--text-sm)', color: 'var(--lam-silver)' }}>
-            Logged in as <span style={{ color: 'var(--lam-gold)' }}>{user.email}</span>
+            Logged in as <span style={{ color: 'var(--lam-gold)' }}>{profile?.first_name} {profile?.last_name}</span>
             <span style={{ margin: '0 0.5rem', color: 'var(--lam-border)' }}>|</span>
             {isSuperadmin ? 'Superadmin' : 'Staff'}
             {profile?.staff_id && (
@@ -222,6 +223,7 @@ export default async function ControlPanelLayout({
           {children}
         </div>
       </main>
+      <AutoLogout timeoutMinutes={15} />
     </div>
   )
 }

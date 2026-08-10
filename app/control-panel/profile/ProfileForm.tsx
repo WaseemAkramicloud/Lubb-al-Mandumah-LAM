@@ -90,23 +90,23 @@ export default function ProfileForm({ profile }: Props) {
         )}
 
         <form onSubmit={handleProfileSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ display: 'flex', gap: '1.5rem' }}>
-            <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 200px' }}>
               <label className="form-label">First Name</label>
               <input type="text" name="first_name" className="form-input" defaultValue={profile.first_name} required />
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: '1 1 200px' }}>
               <label className="form-label">Last Name</label>
               <input type="text" name="last_name" className="form-input" defaultValue={profile.last_name} required />
             </div>
           </div>
           
-          <div style={{ display: 'flex', gap: '1.5rem' }}>
-            <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 200px' }}>
               <label className="form-label">Phone Number (Optional)</label>
               <input type="tel" name="phone" className="form-input" defaultValue={profile.phone || ''} placeholder="+971..." />
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: '1 1 200px' }}>
               <label className="form-label">Designation</label>
               <input type="text" name="designation" className="form-input" defaultValue={profile.designation || ''} />
             </div>

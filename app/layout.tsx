@@ -3,6 +3,7 @@ import "./globals.css";
 import { siteConfig } from "@/lib/config/site";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import LayoutWrapper from "@/components/layout/LayoutWrapper";
 
 export const metadata: Metadata = {
   title: {
@@ -50,9 +51,9 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
-        <Header />
-        <main id="main-content">{children}</main>
-        <Footer />
+        <LayoutWrapper header={<Header />} footer={<Footer />}>
+          {children}
+        </LayoutWrapper>
       </body>
     </html>
   );
