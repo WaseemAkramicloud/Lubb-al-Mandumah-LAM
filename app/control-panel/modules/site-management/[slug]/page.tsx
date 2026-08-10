@@ -96,6 +96,86 @@ export default async function PageSectionsPage({ params }: { params: { slug: str
           // Use published content for display (this is what the visitor sees)
           const displayContent = published && Object.keys(published).length > 0 ? published : null
 
+          // Detect "Info Panel" sections — these point to other modules
+          const isInfoPanel = section.name.includes('Info Panel')
+          const infoText = (displayContent?.info_text as string) || (draft as any)?.info_text || ''
+
+          // Detect which module the Info Panel links to
+          const moduleLinks: Record<string, { label: string; href: string }> = {
+            'products_info': { label: 'Go to Products Module →', href: '/control-panel/modules/products' },
+            'solutions_info': { label: 'Go to Solutions Module →', href: '/control-panel/modules/solutions' },
+            'industries_info': { label: 'Go to Industries Module →', href: '/control-panel/modules/industries' },
+            'insights_info': { label: 'Go to Insights Module →', href: '/control-panel/modules/insights' },
+            'careers_positions': { label: 'Go to Careers Module →', href: '/control-panel/modules/careers' },
+            'contact_form': { label: 'Go to Leads & Clients →', href: '/control-panel/modules/leads-clients' },
+            'demo_form': { label: 'Go to Leads & Clients →', href: '/control-panel/modules/leads-clients' },
+          }
+          const moduleLink = moduleLinks[section.section_key]
+
+          // ── Info Panel card (managed elsewhere) ──
+          if (isInfoPanel || moduleLink) {
+            return (
+              <div
+                key={section.section_key}
+                className="lam-card"
+                style={{ padding: 0, overflow: 'hidden', background: 'var(--lam-surface)', borderStyle: 'dashed', borderColor: 'var(--lam-border)' }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '1.25rem 1.5rem',
+                    borderBottom: '1px dashed var(--lam-border)',
+                    background: 'rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '18px' }}>🔗</span>
+                    <h3 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-silver-light)', margin: 0 }}>
+                      {section.name.replace(' (Info Panel)', '')}
+                    </h3>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        background: 'rgba(52,152,219,0.1)',
+                        color: '#3498db',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '4px',
+                        textTransform: 'uppercase',
+                        fontWeight: 700,
+                        border: '1px solid rgba(52,152,219,0.2)',
+                      }}
+                    >
+                      Managed Elsewhere
+                    </span>
+                  </div>
+                  {moduleLink && (
+                    <Link
+                      href={moduleLink.href}
+                      className="btn"
+                      style={{
+                        padding: '0.4rem 1rem',
+                        fontSize: 'var(--text-sm)',
+                        background: 'rgba(52,152,219,0.1)',
+                        border: '1px solid rgba(52,152,219,0.3)',
+                        color: '#3498db',
+                      }}
+                    >
+                      {moduleLink.label}
+                    </Link>
+                  )}
+                </div>
+                <div style={{ padding: '1rem 1.5rem' }}>
+                  <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)', lineHeight: 1.6, margin: 0 }}>
+                    {infoText || 'This content is managed via a separate module in the sidebar.'}
+                  </p>
+                </div>
+              </div>
+            )
+          }
+
+          // ── Normal editable section card ──
           return (
             <div
               key={section.section_key}
