@@ -111,3 +111,36 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 SUPABASE_SERVICE_ROLE_KEY=<REDACTED>
 SUPABASE_SECRET_KEY=<REDACTED>
 ```
+
+## 🛠️ Control Panel — Global Build Rules
+*(Apply to All Stages)*
+1. **Inspect before changing**: Inspect the existing Next.js project before changing anything. Extend the current architecture instead of replacing working code.
+2. **Preserve public site**: Preserve the current public website design, routes and content unless a stage explicitly requires moving a content source into the CMS.
+3. **Preserve auth base**: Preserve the existing staff login and the existing Superadmin account. Do not silently create a second competing Superadmin.
+4. **Use existing Supabase**: Use the existing LAM website Supabase project for website staff, permissions, CMS content, website leads/clients and website pricing.
+5. **No SSO**: Do not add SSO or LAM ID. Authentication remains ordinary work-email + password for this project.
+6. **Protect secrets**: Never expose the Supabase service-role key or other administrator secrets to browser/client code.
+7. **Server-side Security**: Enforce permissions server-side/database-side as well as in the interface. Hiding a menu item is not sufficient security.
+8. **Safe migrations**: Prefer additive migrations and safe migration scripts. Do not destroy existing lead/request data.
+9. **UI tokens**: Use existing LAM design tokens and dark/gold visual language for the internal control panel, but prioritise clarity and speed over decorative effects.
+10. **Pre-flight checks**: Run lint/typecheck/build and relevant tests before declaring a stage complete. Fix errors caused by the stage.
+11. **Stage gate**: Do not proceed automatically to the next stage. Finish the stage, update LAM_WEB_CONTROL_PANEL_MASTER_LOG.md, report what changed, and stop for approval.
+
+## 📝 Master Project Record Rule
+**PROJECT RECORD RULE — NON-NEGOTIABLE**
+Create or maintain exactly one repository-root Markdown progress file named `LAM_WEB_CONTROL_PANEL_MASTER_LOG.md`.
+
+- **At the beginning**: Maintain a concise CURRENT STATUS section that always reflects the present state of the control-panel project in plain English.
+- **At the end of every stage**: Append a dated stage entry. Never delete the historical entries. Record:
+  1. Current stage and status (Not Started / In Progress / Completed / Blocked).
+  2. What was implemented in this stage.
+  3. User-visible routes/screens added or changed.
+  4. Important files/components/actions created or modified.
+  5. Database tables, columns, policies, migrations or seed data added/changed.
+  6. Authentication, roles and permissions decisions.
+  7. Environment variables or external configuration required.
+  8. Tests/build checks performed and their result.
+  9. Manual steps still required from the project owner.
+  10. Known issues, deferred items and risks.
+  11. Exact recommended next step.
+- **Goal**: Keep the log readable by a non-developer. It must be sufficient for a new AI/developer session to understand the project without guessing. Do not create multiple competing progress/status Markdown files for this control-panel work.
