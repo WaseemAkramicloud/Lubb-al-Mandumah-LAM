@@ -48,6 +48,7 @@ export default async function CmsEditPage({ params }: { params: { slug: string, 
         schema={section.content_schema}
         initialData={section.draft_content || section.published_content || {}}
         canPublish={canPublish}
+        previewUrl={p.slug === 'home' ? '/?preview=true' : `/${p.slug}?preview=true`}
       />
     </div>
   )

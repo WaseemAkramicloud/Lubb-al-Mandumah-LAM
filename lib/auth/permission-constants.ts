@@ -20,10 +20,10 @@ export type StaffPermissions = Partial<Record<ModuleName, PermissionAction[]>>
 export const MODULE_DEFINITIONS: Record<ModuleName, { label: string, actions: PermissionAction[] }> = {
   leads_clients: { label: 'Leads & Clients', actions: ['view', 'create', 'edit', 'delete'] },
   site_management: { label: 'Site Management', actions: ['view', 'create', 'edit', 'publish'] },
-  products: { label: 'Products', actions: ['view', 'create', 'edit', 'delete'] },
+  products: { label: 'Products', actions: ['view', 'create', 'edit', 'delete', 'publish'] },
   insights: { label: 'Insights', actions: ['view', 'create', 'edit', 'delete', 'publish'] },
-  pricing_plans: { label: 'Pricing & Plans', actions: ['view', 'edit', 'manage_pricing'] },
-  careers: { label: 'Careers', actions: ['view', 'create', 'edit', 'delete'] },
+  pricing_plans: { label: 'Pricing & Plans', actions: ['view', 'edit', 'manage_pricing', 'publish'] },
+  careers: { label: 'Careers', actions: ['view', 'create', 'edit', 'delete', 'publish'] },
   media_library: { label: 'Media Library', actions: ['view', 'create', 'delete'] },
   user_management: { label: 'User Management', actions: ['view', 'create', 'edit', 'delete'] },
   access_permissions: { label: 'Access & Permissions', actions: ['view', 'edit'] },
@@ -50,8 +50,8 @@ export const ROLE_TEMPLATES: Record<string, { label: string, permissions: StaffP
   product_manager: {
     label: 'Product Manager',
     permissions: {
-      products: ['view', 'create', 'edit', 'delete'],
-      pricing_plans: ['view', 'edit']
+      products: ['view', 'create', 'edit', 'delete', 'publish'],
+      pricing_plans: ['view', 'edit', 'publish']
     }
   },
   commercial_manager: {
@@ -67,10 +67,10 @@ export const ROLE_TEMPLATES: Record<string, { label: string, permissions: StaffP
     permissions: {
       leads_clients: ['view', 'create', 'edit', 'delete'],
       site_management: ['view', 'create', 'edit', 'publish'],
-      products: ['view', 'create', 'edit', 'delete'],
+      products: ['view', 'create', 'edit', 'delete', 'publish'],
       insights: ['view', 'create', 'edit', 'delete', 'publish'],
-      pricing_plans: ['view', 'edit', 'manage_pricing'],
-      careers: ['view', 'create', 'edit', 'delete'],
+      pricing_plans: ['view', 'edit', 'manage_pricing', 'publish'],
+      careers: ['view', 'create', 'edit', 'delete', 'publish'],
       media_library: ['view', 'create', 'delete'],
       user_management: ['view']
     }
@@ -80,10 +80,10 @@ export const ROLE_TEMPLATES: Record<string, { label: string, permissions: StaffP
     permissions: {
       leads_clients: ['view', 'create', 'edit', 'delete'],
       site_management: ['view', 'create', 'edit', 'publish'],
-      products: ['view', 'create', 'edit', 'delete'],
+      products: ['view', 'create', 'edit', 'delete', 'publish'],
       insights: ['view', 'create', 'edit', 'delete', 'publish'],
-      pricing_plans: ['view', 'edit', 'manage_pricing'],
-      careers: ['view', 'create', 'edit', 'delete'],
+      pricing_plans: ['view', 'edit', 'manage_pricing', 'publish'],
+      careers: ['view', 'create', 'edit', 'delete', 'publish'],
       media_library: ['view', 'create', 'delete'],
       user_management: ['view', 'create', 'edit', 'delete'],
       access_permissions: ['view', 'edit'],

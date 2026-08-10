@@ -82,3 +82,16 @@ export async function deleteMedia(id: string, fileUrl: string) {
   revalidatePath('/control-panel/modules/media-library')
   return { success: true }
 }
+
+export async function getMediaAssets() {
+  await requirePermission('media_library', 'view')
+  
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('media_assets')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+  return data
+}

@@ -1,17 +1,36 @@
 import Link from "next/link";
-import { products } from "@/lib/config/products";
+import { getProductById, Product } from "@/lib/config/products";
 import { SectionContainer } from "@/components/ui/SectionContainer";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 
-export function ProductsStrip() {
+interface ProductsStripProps {
+  data?: any;
+}
+
+export async function ProductsStrip({ data }: ProductsStripProps) {
+  // Extract data with fallback
+  const eyebrow = data?.eyebrow || "Core SaaS Products";
+  const title = data?.title || "FEATURED ECOSYSTEM PLATFORMS";
+  const subtitle = data?.subtitle || "While our ecosystem is constantly expanding with new solutions in development, explore our current featured platforms tailored for specific industry domains.";
+  
+  // Use product_slugs from CMS if available, otherwise fallback to default featured products
+  const productSlugs = data?.product_slugs 
+    ? data.product_slugs.split(',').map((s: string) => s.trim()).filter(Boolean)
+    : ["atom", "aimhighserp", "maams", "amal", "pointo"];
+  
+  // Fetch products dynamically
+  const products = (
+    await Promise.all(productSlugs.map((slug: string) => getProductById(slug)))
+  ).filter((p): p is Product => p !== undefined);
+
   return (
     <SectionContainer background="black" size="lg">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "2rem", marginBottom: "3rem" }}>
         <div style={{ flex: 1, minWidth: "300px" }}>
           <SectionHeader
-            eyebrow="Core SaaS Products"
-            title="FEATURED ECOSYSTEM PLATFORMS"
-            subtitle="While our ecosystem is constantly expanding with new solutions in development, explore our current featured platforms tailored for specific industry domains."
+            eyebrow={eyebrow}
+            title={title}
+            subtitle={subtitle}
           />
         </div>
         <Link href="/products" className="btn btn-secondary">

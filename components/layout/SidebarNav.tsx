@@ -22,6 +22,8 @@ export default function SidebarNav({ permissions, isSuperadmin }: SidebarNavProp
     { href: '/control-panel/modules/leads-clients', label: 'Leads & Clients', module: 'leads_clients' as ModuleName },
     { href: '/control-panel/modules/site-management', label: 'Site Management', module: 'site_management' as ModuleName },
     { href: '/control-panel/modules/products', label: 'Products', module: 'products' as ModuleName },
+    { href: '/control-panel/modules/solutions', label: 'Solutions', module: 'site_management' as ModuleName },
+    { href: '/control-panel/modules/industries', label: 'Industries', module: 'site_management' as ModuleName },
     { href: '/control-panel/modules/insights', label: 'Insights', module: 'insights' as ModuleName },
     { href: '/control-panel/modules/pricing', label: 'Pricing & Plans', module: 'pricing_plans' as ModuleName },
     { href: '/control-panel/modules/careers', label: 'Careers', module: 'careers' as ModuleName },

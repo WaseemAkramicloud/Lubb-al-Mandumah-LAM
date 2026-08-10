@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth/permissions'
 import { revalidatePath } from 'next/cache'
+import { logAudit } from '@/lib/actions/audit'
 
 export async function saveInsightDraft(formData: FormData) {
   await requirePermission('insights', 'edit')
@@ -30,6 +31,8 @@ export async function saveInsightDraft(formData: FormData) {
     if (error) throw new Error(error.message)
   }
 
+  await logAudit('cms_insight', slug, 'draft_saved', { payload })
+
   revalidatePath('/insights')
   revalidatePath(`/insights/${slug}`)
   revalidatePath('/control-panel/modules/insights')
@@ -48,6 +51,8 @@ export async function publishInsight(slug: string) {
     
   if (error) throw new Error(error.message)
 
+  await logAudit('cms_insight', slug, 'published', {})
+
   revalidatePath('/insights')
   revalidatePath(`/insights/${slug}`)
   revalidatePath('/control-panel/modules/insights')
@@ -65,6 +70,8 @@ export async function unpublishInsight(slug: string) {
     .eq('slug', slug)
     
   if (error) throw new Error(error.message)
+
+  await logAudit('cms_insight', slug, 'unpublished', {})
 
   revalidatePath('/insights')
   revalidatePath(`/insights/${slug}`)

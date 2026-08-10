@@ -19,14 +19,16 @@ export const metadata: Metadata = {
   description: siteConfig.description,
 };
 
-export default async function HomePage() {
-  const pageData = await getCmsPage('home')
+export default async function HomePage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const searchParams = await props.searchParams
+  const isPreview = searchParams.preview === 'true'
+  const pageData = await getCmsPage('home', { preview: isPreview })
 
   return (
     <>
       <HeroSlider data={pageData['home_hero']} />
       <IntroSection data={pageData['home_intro']} />
-      <ProductsStrip />
+      <ProductsStrip data={pageData['home_products']} />
       <SolutionsTeaser />
       <IndustriesSection />
       <WhyLamSection data={pageData['home_why_lam']} />

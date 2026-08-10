@@ -1,4 +1,4 @@
-import { requirePermission } from '@/lib/auth/permissions'
+import { requirePermission, hasPermission } from '@/lib/auth/permissions'
 import { createClient } from '@/lib/supabase/server'
 import { InsightForm } from '../../InsightForm'
 import Link from 'next/link'
@@ -25,6 +25,8 @@ export default async function EditInsightPage({ params }: Props) {
     .eq('slug', resolvedParams.slug)
     .single()
 
+  const canPublish = await hasPermission('insights', 'publish')
+
   if (error || !article) {
     notFound()
   }
@@ -36,7 +38,7 @@ export default async function EditInsightPage({ params }: Props) {
           ← Back to Insights
         </Link>
       </div>
-      <InsightForm initialData={article} isNew={false} />
+      <InsightForm initialData={article} isNew={false} canPublish={canPublish} previewUrl={`/insights/${article.slug}?preview=true`} />
     </div>
   )
 }

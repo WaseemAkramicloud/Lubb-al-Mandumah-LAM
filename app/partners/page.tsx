@@ -4,19 +4,26 @@ import { SectionContainer } from "@/components/ui/SectionContainer";
 import { DetailHero } from "@/components/ui/DetailHero";
 import { EmptyState } from "@/components/ui/States";
 import Link from "next/link";
+import { getCmsPage } from "@/lib/cms/client";
 
 export const metadata: Metadata = {
   title: `Partners & Clients | ${siteConfig.shortName}`,
   description: "Trusted collaborations and technological partnerships.",
 };
 
-export default function PartnersPage() {
+export default async function PartnersPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const searchParams = await props.searchParams
+  const isPreview = searchParams.preview === 'true'
+  const pageData = await getCmsPage('partners', { preview: isPreview }) as any;
+  const heroData = pageData['partners_hero'] || {};
+  const ctaData = pageData['partners_cta'] || {};
+
   return (
     <>
       <DetailHero
-        eyebrow="Partners & Clients"
-        title="Ecosystem Collaboration"
-        subtitle="Trusted by leading organisations worldwide. We build strategic relationships to deploy enterprise technology at scale."
+        eyebrow={heroData.eyebrow || "Partners & Clients"}
+        title={heroData.title || "Ecosystem Collaboration"}
+        subtitle={heroData.subtitle || "Trusted by leading organisations worldwide. We build strategic relationships to deploy enterprise technology at scale."}
       />
 
       <SectionContainer background="black" size="lg">
@@ -57,8 +64,12 @@ export default function PartnersPage() {
             </div>
             
             <div style={{ marginTop: "3rem", textAlign: "center" }}>
-              <Link href="/contact?subject=Partnership" className="btn btn-primary btn-lg">
-                Become a Partner
+              <h2 style={{ fontSize: "var(--text-2xl)", marginBottom: "1rem" }}>{ctaData.title || "Become a Partner"}</h2>
+              <p style={{ color: "var(--lam-silver-light)", marginBottom: "2rem", maxWidth: "600px", margin: "0 auto" }}>
+                {ctaData.description || "Whether you are a hardware manufacturer looking to integrate with PointO, or a digital agency seeking to leverage AimHighSERP, we are open to strategic alliances."}
+              </p>
+              <Link href={ctaData.button_link || "/contact?subject=Partnership"} className="btn btn-primary btn-lg">
+                {ctaData.button_text || "Apply for Partnership"}
               </Link>
             </div>
           </div>

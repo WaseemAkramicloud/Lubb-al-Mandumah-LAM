@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth/permissions'
 import { revalidatePath } from 'next/cache'
+import { logAudit } from '@/lib/actions/audit'
 
 export async function saveProductDraft(formData: FormData) {
   await requirePermission('products', 'edit')
@@ -42,6 +43,8 @@ export async function saveProductDraft(formData: FormData) {
     if (error) throw new Error(error.message)
   }
 
+  await logAudit('cms_product', slug, 'draft_saved', { payload })
+
   revalidatePath('/products')
   revalidatePath(`/products/${slug}`)
   revalidatePath('/control-panel/modules/products')
@@ -61,6 +64,8 @@ export async function publishProduct(slug: string) {
     
   if (error) throw new Error(error.message)
 
+  await logAudit('cms_product', slug, 'published', {})
+
   revalidatePath('/products')
   revalidatePath(`/products/${slug}`)
   revalidatePath('/control-panel/modules/products')
@@ -78,6 +83,8 @@ export async function unpublishProduct(slug: string) {
     .eq('slug', slug)
     
   if (error) throw new Error(error.message)
+
+  await logAudit('cms_product', slug, 'unpublished', {})
 
   revalidatePath('/products')
   revalidatePath(`/products/${slug}`)

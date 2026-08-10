@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { fetchUserPermissions } from '@/lib/auth/permissions'
+import { logAudit } from '@/lib/actions/audit'
 
 export async function saveCmsDraft(sectionKey: string, draftContent: Record<string, unknown>) {
   try {
@@ -26,6 +27,8 @@ export async function saveCmsDraft(sectionKey: string, draftContent: Record<stri
 
     if (error) return { error: error.message }
     
+    await logAudit('cms_section', sectionKey, 'draft_saved', { draft_content: draftContent })
+    
     // We don't need to revalidate public paths on draft save, but we revalidate control panel
     revalidatePath('/control-panel/modules/site-management', 'layout')
     return { success: true }
@@ -48,6 +51,13 @@ export async function publishCmsSection(sectionKey: string, content: Record<stri
       return { error: 'Unauthorized to publish site content' }
     }
 
+    // Get current published content for versioning
+    const { data: existing } = await supabase
+      .from('cms_sections')
+      .select('published_content')
+      .eq('section_key', sectionKey)
+      .single()
+
     const { error } = await supabase
       .from('cms_sections')
       .update({ 
@@ -57,6 +67,11 @@ export async function publishCmsSection(sectionKey: string, content: Record<stri
       .eq('section_key', sectionKey)
 
     if (error) return { error: error.message }
+    
+    await logAudit('cms_section', sectionKey, 'published', { 
+      new_content: content,
+      previous_state: existing?.published_content
+    })
     
     // Hard revalidate the public site root (and specific pages when we have them)
     revalidatePath('/', 'layout')

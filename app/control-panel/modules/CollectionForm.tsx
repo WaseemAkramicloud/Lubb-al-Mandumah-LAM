@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { saveInsightDraft, publishInsight, unpublishInsight } from '@/lib/actions/insights'
+import { saveCollectionDraft, publishCollection, unpublishCollection } from '@/lib/actions/collections'
 
-export function InsightForm({ initialData, isNew = false, canPublish = false, previewUrl }: { initialData?: any, isNew?: boolean, canPublish?: boolean, previewUrl?: string }) {
+export function CollectionForm({ initialData, isNew = false, type, canPublish = false, previewUrl }: { initialData?: any, isNew?: boolean, type: 'solution' | 'industry', canPublish?: boolean, previewUrl?: string }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -16,10 +16,13 @@ export function InsightForm({ initialData, isNew = false, canPublish = false, pr
 
     try {
       const formData = new FormData(e.currentTarget)
+      formData.append('type', type)
       formData.append('is_new', isNew.toString())
-      await saveInsightDraft(formData)
+      
+      await saveCollectionDraft(formData)
+
       if (isNew) {
-        router.push('/control-panel/modules/insights')
+        router.push(`/control-panel/modules/${type}s`)
       } else {
         router.refresh()
       }
@@ -33,7 +36,7 @@ export function InsightForm({ initialData, isNew = false, canPublish = false, pr
   const handlePublish = async () => {
     setLoading(true)
     try {
-      await publishInsight(initialData.slug)
+      await publishCollection(initialData.slug, type)
       router.refresh()
     } catch (err: any) {
       setError(err.message)
@@ -45,7 +48,7 @@ export function InsightForm({ initialData, isNew = false, canPublish = false, pr
   const handleUnpublish = async () => {
     setLoading(true)
     try {
-      await unpublishInsight(initialData.slug)
+      await unpublishCollection(initialData.slug, type)
       router.refresh()
     } catch (err: any) {
       setError(err.message)
@@ -62,8 +65,9 @@ export function InsightForm({ initialData, isNew = false, canPublish = false, pr
         </div>
       )}
 
+      {/* Header Actions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid var(--lam-border)' }}>
-        <h2 style={{ fontSize: 'var(--text-xl)' }}>{isNew ? 'Create Article' : 'Edit Article'}</h2>
+        <h2 style={{ fontSize: 'var(--text-xl)', textTransform: 'capitalize' }}>{isNew ? `Create New ${type}` : `Edit ${type}`}</h2>
         
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button type="submit" disabled={loading} className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
@@ -90,51 +94,31 @@ export function InsightForm({ initialData, isNew = false, canPublish = false, pr
         </div>
       </div>
 
-      <div className="form-group">
-        <label>Article Title</label>
-        <input type="text" name="title" required defaultValue={initialData?.title} className="form-input" />
-      </div>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+        <div className="form-group">
+          <label>Title</label>
+          <input type="text" name="title" required defaultValue={initialData?.title} className="form-input" />
+        </div>
+        
         <div className="form-group">
           <label>Slug (URL path)</label>
           <input type="text" name="slug" required defaultValue={initialData?.slug} className="form-input" disabled={!isNew} />
         </div>
-
-        <div className="form-group">
-          <label>Category</label>
-          <select name="category" required defaultValue={initialData?.category || 'Articles'} className="form-input">
-            <option>Articles</option>
-            <option>Product Updates</option>
-            <option>Business Technology</option>
-            <option>ERP & Automation</option>
-            <option>Digital Transformation</option>
-            <option>Guides</option>
-            <option>News</option>
-          </select>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1.5rem' }}>
-        <div className="form-group">
-          <label>Publish Date</label>
-          <input type="date" name="date" required defaultValue={initialData?.date || new Date().toISOString().split('T')[0]} className="form-input" />
-        </div>
-
-        <div className="form-group">
-          <label>Author</label>
-          <input type="text" name="author" required defaultValue={initialData?.author || 'LΛM Strategy'} className="form-input" />
-        </div>
       </div>
 
       <div className="form-group" style={{ marginTop: '1.5rem' }}>
-        <label>Excerpt / Summary</label>
-        <textarea name="excerpt" required defaultValue={initialData?.excerpt} className="form-input" rows={3} />
+        <label>Description</label>
+        <textarea name="description" required defaultValue={initialData?.data?.description} className="form-input" rows={3} />
       </div>
 
       <div className="form-group" style={{ marginTop: '1.5rem' }}>
-        <label>Article Content (HTML/Markdown)</label>
-        <textarea name="content" required defaultValue={initialData?.content} className="form-input" rows={15} style={{ fontFamily: 'monospace' }} />
+        <label>Common Needs (One per line)</label>
+        <textarea name="commonNeeds" required defaultValue={initialData?.data?.commonNeeds?.join('\n')} className="form-input" rows={5} />
+      </div>
+
+      <div className="form-group" style={{ marginTop: '1.5rem' }}>
+        <label>Related Products (Slugs, comma separated)</label>
+        <input type="text" name="relatedProducts" defaultValue={initialData?.data?.relatedProducts?.join(', ')} className="form-input" placeholder="e.g. atom, aimhighserp" />
       </div>
 
     </form>

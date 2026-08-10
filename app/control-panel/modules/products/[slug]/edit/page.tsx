@@ -1,4 +1,4 @@
-import { requirePermission } from '@/lib/auth/permissions'
+import { requirePermission, hasPermission } from '@/lib/auth/permissions'
 import { createClient } from '@/lib/supabase/server'
 import { ProductForm } from '../../ProductForm'
 import Link from 'next/link'
@@ -25,6 +25,8 @@ export default async function EditProductPage({ params }: Props) {
     .eq('slug', resolvedParams.slug)
     .single()
 
+  const canPublish = await hasPermission('products', 'publish')
+
   if (error || !product) {
     notFound()
   }
@@ -36,7 +38,7 @@ export default async function EditProductPage({ params }: Props) {
           ← Back to Products
         </Link>
       </div>
-      <ProductForm initialData={product} isNew={false} />
+      <ProductForm initialData={product} isNew={false} canPublish={canPublish} previewUrl={`/products/${product.slug}?preview=true`} />
     </div>
   )
 }

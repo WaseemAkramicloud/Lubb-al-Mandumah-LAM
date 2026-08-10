@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { siteConfig } from "@/lib/config/site";
 import { SectionContainer } from "@/components/ui/SectionContainer";
+import { DetailHero } from "@/components/ui/DetailHero";
 import { ArticleCard } from "@/components/insights/ArticleCard";
-import { getInsightsByCategory } from "@/lib/config/insights";
+import { createClient } from "@/lib/supabase/server";
+import { getCmsPage } from "@/lib/cms/client";
 
 const routeMeta = {
   title: "Insights & Updates",
@@ -23,35 +25,34 @@ export default async function InsightsPage({ searchParams }: Props) {
   const resolvedParams = await searchParams;
   const categoryParam = typeof resolvedParams.category === "string" ? resolvedParams.category : "All";
   
-  const filteredInsights = await getInsightsByCategory(categoryParam);
+  let query = createClient().then(supabase => supabase
+    .from("cms_insights")
+    .select("*")
+    .eq("status", "published")
+    .order("published_at", { ascending: false }));
+
+  let { data: insights } = await query;
+  
+  if (categoryParam !== "All" && insights) {
+    insights = insights.filter((item: any) => item.category === categoryParam);
+  }
+
+  const pageData = (await getCmsPage('insights')) as any;
+  const heroData = pageData['insights_hero'] || {};
 
   return (
     <>
-      <div
-        style={{
-          paddingTop: "calc(var(--header-height) + 4rem)",
-          paddingBottom: "4rem",
-          background: "var(--lam-charcoal)",
-          borderBottom: "1px solid var(--lam-border)",
-        }}
-      >
-        <div className="lam-container">
-          <p className="lam-eyebrow" style={{ marginBottom: "0.75rem" }}>{routeMeta.eyebrow}</p>
-          <div className="lam-accent-line" />
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2rem, 4vw, 3.5rem)", marginBottom: "1rem" }}>
-            {routeMeta.title}
-          </h1>
-          <p style={{ fontSize: "var(--text-xl)", color: "var(--lam-silver-light)", maxWidth: "560px" }}>
-            {routeMeta.subtitle}
-          </p>
-        </div>
-      </div>
+      <DetailHero
+        eyebrow={heroData.eyebrow || routeMeta.eyebrow}
+        title={heroData.title || routeMeta.title}
+        subtitle={heroData.subtitle || routeMeta.subtitle}
+      />
 
       <SectionContainer background="black" size="lg">
-        {filteredInsights.length === 0 ? (
+        {(!insights || insights.length === 0) ? (
           <div style={{ padding: "4rem 0", textAlign: "center" }}>
             <p style={{ color: "var(--lam-silver)", fontSize: "var(--text-lg)" }}>
-              No articles found in this category.
+              No articles found.
             </p>
           </div>
         ) : (
@@ -62,7 +63,7 @@ export default async function InsightsPage({ searchParams }: Props) {
               gap: "2rem",
             }}
           >
-            {filteredInsights.map((article) => (
+            {insights.map((article: any) => (
               <ArticleCard key={article.id} article={article} />
             ))}
           </div>

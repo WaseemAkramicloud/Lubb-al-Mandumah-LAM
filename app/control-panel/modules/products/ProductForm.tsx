@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveProductDraft, publishProduct, unpublishProduct } from '@/lib/actions/products'
 
-export function ProductForm({ initialData, isNew = false }: { initialData?: any, isNew?: boolean }) {
+export function ProductForm({ initialData, isNew = false, canPublish = false, previewUrl }: { initialData?: any, isNew?: boolean, canPublish?: boolean, previewUrl?: string }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -71,13 +71,19 @@ export function ProductForm({ initialData, isNew = false }: { initialData?: any,
             {loading ? 'Saving...' : 'Save Draft'}
           </button>
           
-          {!isNew && initialData?.status === 'draft' && (
+          {!isNew && previewUrl && (
+            <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
+              Preview Draft
+            </a>
+          )}
+          
+          {!isNew && initialData?.status === 'draft' && canPublish && (
             <button type="button" onClick={handlePublish} disabled={loading} className="btn btn-primary">
               Publish Live
             </button>
           )}
           
-          {!isNew && initialData?.status === 'published' && (
+          {!isNew && initialData?.status === 'published' && canPublish && (
             <button type="button" onClick={handleUnpublish} disabled={loading} className="btn" style={{ border: '1px solid #e74c3c', color: '#e74c3c' }}>
               Unpublish
             </button>

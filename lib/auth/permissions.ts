@@ -55,3 +55,28 @@ export async function requirePermission(module: ModuleName, action: PermissionAc
 
   return true
 }
+
+/**
+ * Server-side helper to silently check if a user has a permission.
+ */
+export async function hasPermission(module: ModuleName, action: PermissionAction = 'view') {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) return false;
+
+  const adminClient = getSupabaseAdmin()
+  const { data: profile } = await adminClient
+    .from('staff_profiles')
+    .select('status')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.status === 'suspended') return false;
+
+  if (user.user_metadata?.role === 'super_admin') return true;
+
+  const permissions = await fetchUserPermissions(user.id)
+  const moduleActions = permissions[module]
+  return !!(moduleActions && moduleActions.includes(action))
+}
