@@ -10,7 +10,17 @@ export const metadata: Metadata = {
   description: "Join the engineers and architects building the LΛM ecosystem.",
 };
 
-export default function CareersPage() {
+import { createClient } from "@/lib/supabase/server";
+
+export default async function CareersPage() {
+  const supabase = await createClient();
+  const { data: careers } = await supabase
+    .from('cms_collections')
+    .select('*')
+    .eq('type', 'career')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false });
+
   return (
     <>
       <DetailHero
@@ -53,16 +63,57 @@ export default function CareersPage() {
 
           <div className="lam-divider" />
 
-          {/* Open Positions (Empty State) */}
+          {/* Open Positions */}
           <div>
             <h2 style={{ fontSize: "var(--text-2xl)", marginBottom: "2rem" }}>Open Positions</h2>
-            <div style={{ border: "1px dashed var(--lam-border)", borderRadius: "var(--radius-xl)", padding: "4rem 2rem", background: "var(--lam-surface)" }}>
-              <EmptyState 
-                icon="⌘"
-                title="No Public Openings"
-                message="Currently, there are no open positions listed publicly. However, LΛM is always looking for exceptional software engineers, systems architects, and product strategists."
-              />
-            </div>
+            
+            {careers && careers.length > 0 ? (
+              <div style={{ display: "grid", gap: "1.5rem" }}>
+                {careers.map((career) => (
+                  <div key={career.slug} className="lam-card" style={{ padding: "2rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
+                      <div>
+                        <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.5rem" }}>{career.title}</h3>
+                        <div style={{ display: "flex", gap: "1rem", color: "var(--lam-silver)", fontSize: "var(--text-sm)" }}>
+                          <span>{career.data?.department}</span>
+                          <span>•</span>
+                          <span>{career.data?.location}</span>
+                          <span>•</span>
+                          <span>{career.data?.type}</span>
+                        </div>
+                      </div>
+                      <Link href={`/contact?subject=Application:%20${career.title}`} className="btn btn-primary" style={{ padding: "0.5rem 1rem", fontSize: "var(--text-sm)" }}>
+                        Apply Now
+                      </Link>
+                    </div>
+                    <p style={{ color: "var(--lam-silver-light)", lineHeight: 1.6, marginBottom: "1.5rem" }}>
+                      {career.data?.description}
+                    </p>
+                    
+                    {career.data?.requirements && career.data.requirements.length > 0 && (
+                      <div>
+                        <h4 style={{ color: "var(--lam-gold)", fontSize: "var(--text-sm)", marginBottom: "0.5rem" }}>Key Requirements</h4>
+                        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                          {career.data.requirements.map((req: string, i: number) => (
+                            <li key={i} style={{ display: "flex", gap: "0.5rem", color: "var(--lam-silver-light)", fontSize: "var(--text-sm)" }}>
+                              <span style={{ color: "var(--lam-gold)" }}>✓</span> {req}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ border: "1px dashed var(--lam-border)", borderRadius: "var(--radius-xl)", padding: "4rem 2rem", background: "var(--lam-surface)" }}>
+                <EmptyState 
+                  icon="⌘"
+                  title="No Public Openings"
+                  message="Currently, there are no open positions listed publicly. However, LΛM is always looking for exceptional software engineers, systems architects, and product strategists."
+                />
+              </div>
+            )}
           </div>
 
           <div className="lam-divider" />

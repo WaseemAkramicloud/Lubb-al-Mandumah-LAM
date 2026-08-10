@@ -97,6 +97,25 @@ export const solutions: Solution[] = [
   }
 ];
 
-export const getSolutionById = (id: string) => {
+import { createClient } from '@/lib/supabase/server';
+
+export const getSolutionById = async (id: string) => {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('cms_collections')
+      .select('*')
+      .eq('slug', id)
+      .eq('type', 'solution')
+      .eq('status', 'published')
+      .single();
+    
+    if (data && data.data) {
+      return { ...data.data, id: data.slug, name: data.title } as Solution;
+    }
+  } catch (err) {
+    console.error(`Failed to fetch solution ${id} from CMS, falling back to static config.`, err);
+  }
+
   return solutions.find((s) => s.id === id);
 };

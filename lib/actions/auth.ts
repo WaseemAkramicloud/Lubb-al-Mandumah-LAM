@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-export async function login(prevState: any, formData: FormData) {
+export async function login(prevState: unknown, formData: FormData) {
   const email = (formData.get('email') as string)?.trim()
   const password = formData.get('password') as string
   
@@ -24,7 +24,7 @@ export async function login(prevState: any, formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
-  redirect('/staff-login/dashboard')
+  redirect('/control-panel/dashboard')
 }
 
 export async function logout() {

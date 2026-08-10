@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/lib/config/site";
 import { SectionContainer } from "@/components/ui/SectionContainer";
 import { ArticleCard } from "@/components/insights/ArticleCard";
-import { insights } from "@/lib/config/insights";
+import { getInsightsByCategory } from "@/lib/config/insights";
 
 const routeMeta = {
   title: "Insights & Updates",
@@ -23,9 +23,7 @@ export default async function InsightsPage({ searchParams }: Props) {
   const resolvedParams = await searchParams;
   const categoryParam = typeof resolvedParams.category === "string" ? resolvedParams.category : "All";
   
-  const filteredInsights = categoryParam === "All" 
-    ? insights 
-    : insights.filter(i => i.category === categoryParam);
+  const filteredInsights = await getInsightsByCategory(categoryParam);
 
   return (
     <>

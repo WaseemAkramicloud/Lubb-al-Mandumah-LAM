@@ -25,7 +25,7 @@ export default async function ProductsPage({ searchParams }: Props) {
   const resolvedParams = await searchParams;
   const categoryParam = typeof resolvedParams.category === "string" ? resolvedParams.category : "All";
   
-  const products = getProductsByCategory(categoryParam);
+  const products = await getProductsByCategory(categoryParam);
 
   return (
     <>

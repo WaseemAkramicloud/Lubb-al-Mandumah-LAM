@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 
-const slides = [
+const defaultSlides = [
   {
     src: "/images/slider/slider-01-boardroom-logo-wall.jpg",
     alt: "LΛM Boardroom with logo wall",
@@ -24,7 +24,9 @@ const slides = [
   },
 ];
 
-export function HeroSlider() {
+export function HeroSlider({ data }: { data?: Record<string, unknown> | null }) {
+  const slidesList = data?.slides as Record<string, string>[] | undefined;
+  const slides = slidesList?.length ? slidesList : defaultSlides;
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export function HeroSlider() {
       setCurrent((prev) => (prev + 1) % slides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [slides.length]);
 
   return (
     <section

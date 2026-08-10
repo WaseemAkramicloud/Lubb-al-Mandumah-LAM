@@ -12,6 +12,15 @@ const nextConfig: NextConfig = {
   },
   // Strict mode
   reactStrictMode: true,
+  async redirects() {
+    return [
+      {
+        source: '/staff-login/dashboard',
+        destination: '/control-panel/dashboard',
+        permanent: true,
+      },
+    ]
+  },
 };
 
 export default nextConfig;

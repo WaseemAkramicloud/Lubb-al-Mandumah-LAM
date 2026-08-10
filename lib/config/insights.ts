@@ -66,11 +66,41 @@ export const insights: Insight[] = [
   }
 ];
 
-export const getInsightsByCategory = (category: string) => {
+import { createClient } from '@/lib/supabase/server';
+
+export const getInsightsByCategory = async (category: string) => {
+  try {
+    const supabase = await createClient();
+    const query = supabase.from('cms_insights').select('*').eq('status', 'published');
+    
+    if (category !== "All") {
+      query.eq('category', category);
+    }
+    
+    const { data } = await query.order('date', { ascending: false });
+    
+    if (data && data.length > 0) {
+      return data.map(d => ({ ...d, id: d.slug })) as Insight[];
+    }
+  } catch (err) {
+    console.error('Failed to fetch insights from CMS, falling back to static config.', err);
+  }
+
   if (category === "All") return insights;
   return insights.filter((i) => i.category === category);
 };
 
-export const getInsightById = (id: string) => {
+export const getInsightById = async (id: string) => {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.from('cms_insights').select('*').eq('slug', id).eq('status', 'published').single();
+    
+    if (data) {
+      return { ...data, id: data.slug } as Insight;
+    }
+  } catch (err) {
+    console.error(`Failed to fetch insight ${id} from CMS, falling back to static config.`, err);
+  }
+
   return insights.find((i) => i.id === id);
 };

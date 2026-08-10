@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { siteConfig } from "@/lib/config/site";
+import { getCmsPage } from "@/lib/cms/client";
 
 // Homepage sections
 import { HeroSlider } from "@/components/home/HeroSlider";
@@ -18,19 +19,21 @@ export const metadata: Metadata = {
   description: siteConfig.description,
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const pageData = await getCmsPage('home')
+
   return (
     <>
-      <HeroSlider />
-      <IntroSection />
+      <HeroSlider data={pageData['home_hero']} />
+      <IntroSection data={pageData['home_intro']} />
       <ProductsStrip />
       <SolutionsTeaser />
       <IndustriesSection />
-      <WhyLamSection />
+      <WhyLamSection data={pageData['home_why_lam']} />
       <SecuritySection />
       <ClientsPreview />
       <InsightsPreview />
-      <CtaSection />
+      <CtaSection data={pageData['home_cta']} />
     </>
   );
 }

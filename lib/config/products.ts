@@ -191,11 +191,42 @@ export const products: Product[] = [
   }
 ];
 
-export const getProductsByCategory = (category: string) => {
+import { createClient } from '@/lib/supabase/server';
+
+export const getProductsByCategory = async (category: string) => {
+  try {
+    const supabase = await createClient();
+    const query = supabase.from('cms_products').select('*').eq('status', 'published');
+    
+    if (category !== "All") {
+      query.eq('category', category);
+    }
+    
+    const { data } = await query.order('created_at');
+    
+    if (data && data.length > 0) {
+      return data as Product[];
+    }
+  } catch (err) {
+    console.error('Failed to fetch products from CMS, falling back to static config.', err);
+  }
+
   if (category === "All") return products;
   return products.filter((p) => p.category === category);
 };
 
-export const getProductById = (id: string) => {
+export const getProductById = async (id: string) => {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.from('cms_products').select('*').eq('slug', id).eq('status', 'published').single();
+    
+    if (data) {
+      // Map slug back to id for type compatibility
+      return { ...data, id: data.slug } as Product;
+    }
+  } catch (err) {
+    console.error(`Failed to fetch product ${id} from CMS, falling back to static config.`, err);
+  }
+
   return products.find((p) => p.id === id);
 };

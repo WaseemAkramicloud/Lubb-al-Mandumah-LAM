@@ -36,12 +36,23 @@ export async function submitContactRequest(formData: FormData) {
       return { success: false, error: "Privacy consent is required." };
     }
 
-    const { error } = await supabase.from("contact_requests").insert(data);
+    const { data: insertedRequest, error } = await supabase.from("contact_requests").insert(data).select('id').single();
     
     if (error) {
       console.error("Supabase insert error (contact_requests):", error);
       return { success: false, error: "Failed to submit request. Please try again later." };
     }
+
+    // Dual-write to CRM Leads
+    await supabase.from("crm_leads").insert({
+      source_type: 'contact',
+      source_id: insertedRequest.id,
+      contact_person: data.name,
+      email: data.email,
+      interested_product: data.enquiry_type,
+      message: data.message,
+      status: 'New'
+    });
 
     return { success: true };
   } catch (err) {
@@ -79,12 +90,26 @@ export async function submitDemoRequest(formData: FormData) {
       return { success: false, error: "Privacy consent is required." };
     }
 
-    const { error } = await supabase.from("demo_requests").insert(data);
+    const { data: insertedDemo, error } = await supabase.from("demo_requests").insert(data).select('id').single();
     
     if (error) {
       console.error("Supabase insert error (demo_requests):", error);
       return { success: false, error: "Failed to submit demo request. Please try again later." };
     }
+
+    // Dual-write to CRM Leads
+    await supabase.from("crm_leads").insert({
+      source_type: 'demo',
+      source_id: insertedDemo.id,
+      contact_person: data.name,
+      company: data.company,
+      email: data.email,
+      phone: data.phone,
+      country: data.country,
+      interested_product: data.product_of_interest,
+      message: data.requirements,
+      status: 'New'
+    });
 
     return { success: true };
   } catch (err) {

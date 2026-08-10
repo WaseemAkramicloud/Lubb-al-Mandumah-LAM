@@ -16,7 +16,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolvedParams = await params;
-  const article = getInsightById(resolvedParams.slug);
+  const article = await getInsightById(resolvedParams.slug);
 
   if (!article) {
     return { title: "Article Not Found" };
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function InsightDetailPage({ params }: Props) {
   const resolvedParams = await params;
-  const article = getInsightById(resolvedParams.slug);
+  const article = await getInsightById(resolvedParams.slug);
 
   if (!article) {
     notFound();

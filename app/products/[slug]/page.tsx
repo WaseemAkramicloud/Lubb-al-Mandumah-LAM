@@ -19,7 +19,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolvedParams = await params;
-  const product = getProductById(resolvedParams.slug);
+  const product = await getProductById(resolvedParams.slug);
 
   if (!product) {
     return { title: "Product Not Found" };
@@ -33,15 +33,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductDetailPage({ params }: Props) {
   const resolvedParams = await params;
-  const product = getProductById(resolvedParams.slug);
+  const product = await getProductById(resolvedParams.slug);
 
   if (!product) {
     notFound();
   }
 
-  const relatedProducts = (product.detail.relatedSolutions || [])
-    .map((id) => getProductById(id))
-    .filter((p) => p !== undefined);
+  const relatedProducts = (
+    await Promise.all(
+      (product.detail.relatedSolutions || []).map((id) => getProductById(id))
+    )
+  ).filter((p) => p !== undefined);
 
   return (
     <>

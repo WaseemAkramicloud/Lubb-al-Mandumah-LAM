@@ -20,7 +20,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolvedParams = await params;
-  const industry = getIndustryById(resolvedParams.slug);
+  const industry = await getIndustryById(resolvedParams.slug);
 
   if (!industry) {
     return { title: "Industry Not Found" };
@@ -34,15 +34,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function IndustryDetailPage({ params }: Props) {
   const resolvedParams = await params;
-  const industry = getIndustryById(resolvedParams.slug);
+  const industry = await getIndustryById(resolvedParams.slug);
 
   if (!industry) {
     notFound();
   }
 
-  const relatedProducts = industry.relatedProducts
-    .map((id) => getProductById(id))
-    .filter((p) => p !== undefined);
+  const relatedProducts = (
+    await Promise.all(
+      industry.relatedProducts.map((id) => getProductById(id))
+    )
+  ).filter((p) => p !== undefined);
 
   // Determine CTA
   const primaryProduct = relatedProducts[0];

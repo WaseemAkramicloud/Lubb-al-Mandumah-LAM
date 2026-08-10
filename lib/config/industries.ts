@@ -97,6 +97,25 @@ export const industries: Industry[] = [
   }
 ];
 
-export const getIndustryById = (id: string) => {
+import { createClient } from '@/lib/supabase/server';
+
+export const getIndustryById = async (id: string) => {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('cms_collections')
+      .select('*')
+      .eq('slug', id)
+      .eq('type', 'industry')
+      .eq('status', 'published')
+      .single();
+    
+    if (data && data.data) {
+      return { ...data.data, id: data.slug, name: data.title } as Industry;
+    }
+  } catch (err) {
+    console.error(`Failed to fetch industry ${id} from CMS, falling back to static config.`, err);
+  }
+
   return industries.find((i) => i.id === id);
 };

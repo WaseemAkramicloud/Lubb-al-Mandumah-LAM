@@ -1,13 +1,34 @@
 import { SectionContainer } from "@/components/ui/SectionContainer";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 
-export function WhyLamSection() {
+export function WhyLamSection({ data }: { data?: Record<string, unknown> | null }) {
+  const eyebrow = (data?.eyebrow as string) || "The Ecosystem Advantage"
+  const title = (data?.title as string) || "WHY CHOOSE LΛM"
+  const subtitle = (data?.subtitle as string) || "Unifying fragmented business operations into a single, cohesive command plane."
+
+  const defaultPoints = [
+    {
+      title: "True Interoperability",
+      description: "Our platforms are built from the ground up to communicate natively. Data flows seamlessly between ATOM ERP, PointO retail systems, and financial ledgers without third-party middleware."
+    },
+    {
+      title: "Single Identity Core",
+      description: "LΛM ID provides federated, role-based access control across all applications. Manage thousands of employees and permissions from one unified directory."
+    },
+    {
+      title: "Predictable Scaling",
+      description: "Start with the core infrastructure you need today, and instantly unlock new capabilities as your enterprise grows, all under consolidated billing and support."
+    }
+  ]
+  const pointsList = data?.points as Record<string, string>[] | undefined;
+  const points = pointsList?.length ? pointsList : defaultPoints
+
   return (
     <SectionContainer background="gunmetal" size="lg">
       <SectionHeader
-        eyebrow="The Ecosystem Advantage"
-        title="WHY CHOOSE LΛM"
-        subtitle="Unifying fragmented business operations into a single, cohesive command plane."
+        eyebrow={eyebrow}
+        title={title}
+        subtitle={subtitle}
         align="center"
       />
 
@@ -19,35 +40,17 @@ export function WhyLamSection() {
           gap: "2.5rem",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--lam-gradient-gold)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--lam-black)", fontWeight: "bold" }}>
-            1
+        {(points as Record<string, string>[]).map((point, index: number) => (
+          <div key={index} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--lam-gradient-gold)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--lam-black)", fontWeight: "bold" }}>
+              {index + 1}
+            </div>
+            <h3 style={{ fontSize: "var(--text-xl)" }}>{point.title}</h3>
+            <p style={{ color: "var(--lam-silver-light)", lineHeight: 1.6 }}>
+              {point.description}
+            </p>
           </div>
-          <h3 style={{ fontSize: "var(--text-xl)" }}>True Interoperability</h3>
-          <p style={{ color: "var(--lam-silver-light)", lineHeight: 1.6 }}>
-            Our platforms are built from the ground up to communicate natively. Data flows seamlessly between ATOM ERP, PointO retail systems, and financial ledgers without third-party middleware.
-          </p>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--lam-gradient-gold)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--lam-black)", fontWeight: "bold" }}>
-            2
-          </div>
-          <h3 style={{ fontSize: "var(--text-xl)" }}>Single Identity Core</h3>
-          <p style={{ color: "var(--lam-silver-light)", lineHeight: 1.6 }}>
-            LΛM ID provides federated, role-based access control across all applications. Manage thousands of employees and permissions from one unified directory.
-          </p>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--lam-gradient-gold)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--lam-black)", fontWeight: "bold" }}>
-            3
-          </div>
-          <h3 style={{ fontSize: "var(--text-xl)" }}>Predictable Scaling</h3>
-          <p style={{ color: "var(--lam-silver-light)", lineHeight: 1.6 }}>
-            Start with the core infrastructure you need today, and instantly unlock new capabilities as your enterprise grows, all under consolidated billing and support.
-          </p>
-        </div>
+        ))}
       </div>
     </SectionContainer>
   );
