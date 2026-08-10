@@ -178,9 +178,6 @@ export default function CmsEditForm({ sectionKey, schema, initialData, canPublis
                           <div key={subField.name as string}>
                             <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem' }}>
                               {subField.label as string}
-                              <span style={{ marginLeft: '0.5rem', color: 'var(--lam-silver-dim)', fontSize: '10px', fontWeight: 'normal', fontFamily: 'monospace' }}>
-                                ({subField.name as string})
-                              </span>
                             </label>
                             {renderField(subField, item[subField.name as string], (val) => handleArrayChange(field.name as string, index, subField.name as string, val))}
                             {!!subField.description && <p style={{ color: 'var(--lam-silver-dim)', fontSize: '12px', marginTop: '0.4rem' }}>{subField.description as string}</p>}
@@ -208,9 +205,6 @@ export default function CmsEditForm({ sectionKey, schema, initialData, canPublis
             <div key={field.name as string}>
               <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem' }}>
                 {field.label as string}
-                <span style={{ marginLeft: '0.5rem', color: 'var(--lam-silver-dim)', fontSize: '10px', fontWeight: 'normal', fontFamily: 'monospace' }}>
-                  ({field.name as string})
-                </span>
               </label>
               {renderField(field, data[field.name as string], (val) => handleFieldChange(field.name as string, val))}
               {!!field.description && <p style={{ color: 'var(--lam-silver-dim)', fontSize: '12px', marginTop: '0.4rem' }}>{field.description as string}</p>}
