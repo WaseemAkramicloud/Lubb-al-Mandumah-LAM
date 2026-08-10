@@ -6,6 +6,7 @@ import { ModuleName } from '@/lib/auth/permission-constants'
 import Link from 'next/link'
 import { logout } from '@/lib/actions/auth'
 import AutoLogout from '@/components/layout/AutoLogout'
+import SidebarNav from '@/components/layout/SidebarNav'
 
 export default async function ControlPanelLayout({
   children,
@@ -81,95 +82,7 @@ export default async function ControlPanelLayout({
           </div>
         </div>
 
-        <nav style={{ flex: 1, padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <Link href="/control-panel/dashboard" style={{
-            padding: '0.75rem 1rem',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--lam-white)',
-            background: 'rgba(255, 255, 255, 0.05)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 500,
-            textDecoration: 'none'
-          }}>
-            Dashboard
-          </Link>
-          
-          {/* Dynamic Modules based on permissions */}
-          {canAccess('leads_clients') && (
-            <Link href="/control-panel/modules/leads-clients" style={sidebarLinkStyle}>
-              Leads & Clients
-            </Link>
-          )}
-          {canAccess('site_management') && (
-            <Link href="/control-panel/modules/site-management" style={sidebarLinkStyle}>
-              Site Management
-            </Link>
-          )}
-          {canAccess('products') && (
-            <Link href="/control-panel/modules/products" style={sidebarLinkStyle}>
-              Products
-            </Link>
-          )}
-          {canAccess('insights') && (
-            <Link href="/control-panel/modules/insights" style={sidebarLinkStyle}>
-              Insights
-            </Link>
-          )}
-          {canAccess('pricing_plans') && (
-            <Link href="/control-panel/modules/pricing" style={sidebarLinkStyle}>
-              Pricing & Plans
-            </Link>
-          )}
-          {canAccess('careers') && (
-            <Link href="/control-panel/modules/careers" style={sidebarLinkStyle}>
-              Careers
-            </Link>
-          )}
-          {canAccess('media_library') && (
-            <Link href="/control-panel/modules/media-library" style={sidebarLinkStyle}>
-              Media Library
-            </Link>
-          )}
-          
-          {canAccess('user_management') && (
-            <Link href="/control-panel/users" style={sidebarLinkStyle}>
-              User Management
-            </Link>
-          )}
-          {canAccess('access_permissions') && (
-            <Link href="/control-panel/access" style={sidebarLinkStyle}>
-              Access & Permissions
-            </Link>
-          )}
-          {canAccess('audit_log') && (
-            <Link href="/control-panel/audit" style={sidebarLinkStyle}>
-              Audit Log
-            </Link>
-          )}
-          {canAccess('system_settings') && (
-            <Link href="/control-panel/modules/system-settings" style={sidebarLinkStyle}>
-              System Settings
-            </Link>
-          )}
-          <Link href="/control-panel/profile" style={{
-            padding: '0.75rem 1rem',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--lam-silver)',
-            fontSize: 'var(--text-sm)',
-            textDecoration: 'none'
-          }}>
-            My Profile
-          </Link>
-          <Link href="/control-panel/settings" style={{
-            padding: '0.75rem 1rem',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--lam-silver)',
-            fontSize: 'var(--text-sm)',
-            textDecoration: 'none'
-          }}>
-            Settings
-          </Link>
-        </nav>
+        <SidebarNav permissions={permissions} isSuperadmin={isSuperadmin} />
 
         <div style={{ padding: '1.5rem', borderTop: '1px solid var(--lam-border)' }}>
           <form action={logout}>
@@ -228,12 +141,3 @@ export default async function ControlPanelLayout({
   )
 }
 
-// Extracted style for cleaner JSX
-const sidebarLinkStyle = {
-  padding: '0.75rem 1rem',
-  borderRadius: 'var(--radius-sm)',
-  color: 'var(--lam-silver)',
-  fontSize: 'var(--text-sm)',
-  textDecoration: 'none',
-  transition: 'background 0.2s, color 0.2s'
-}
