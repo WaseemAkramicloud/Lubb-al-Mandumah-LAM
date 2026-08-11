@@ -8,8 +8,12 @@
 - **Phase 2 (CMS Expansion & Global Configuration)** is **Completed** (Stages 1–6).
 - **Phase 3 (Future-Proofing Products & CRM Foundations)** is **Completed** (2026-08-11).
 - **Phase 4 (LAM ID, Central Identity, Customer Access & SSO Foundation — Hardened)** is **Completed & Fully Verified** (2026-08-11).
-  - All 12 hardened security criteria verified 100% PASSED.
-  - Next.js production build compiled successfully across 84 static and dynamic routes. Zero breaking changes.
+- **Phase 5 (Deployed Access Correction, Invite-Only Customer Registration, Staff-Controlled Customer & Demo Onboarding)** is **Completed & Verified** (2026-08-11).
+  - Superadmin login failure audited & resolved (password restored in Supabase Auth, existing identity preserved).
+  - Public customer self-registration (`/id/register`) converted to invite-only mode.
+  - Staff Control Panel customer onboarding workflow built (`/control-panel/modules/ecosystem/companies/new`) supporting both Standard and Demo (e.g. Unicore Enterprises) customer onboarding.
+  - Demo company lifecycle controls (inline Suspend/Reactivate toggle and entitlement expiry) added.
+  - Vercel deployed hostnames aligned via environment variables (`NEXT_PUBLIC_APP_URL` and `NEXORA_BASE_URL`) and `sso_applications` redirect URIs updated in Supabase.
 
 
 
@@ -418,6 +422,50 @@ Before pushing to production, the project owner MUST manually perform these acti
    - Execute database migrations `20260811000001_lam_id_sso.sql` and `20260811000002_lam_sso_inter_service.sql` in Supabase.
    - Run `npx tsx scripts/bootstrap-superadmin.ts --email=... --password=...` once on initial deployment.
 10. **Known issues & deferred items**: None.
-11. **Exact recommended next step**: Await user instruction for NEXORA SSO client connection.
+11. **Exact recommended next step**: Production deployment to Vercel and custom domain setup.
+
+---
+
+### Stage 11: Deployed Access Correction, Invite-Only Registration & Staff-Controlled Customer/Demo Onboarding (2026-08-11)
+1. **Current stage and status**: Completed & Verified.
+2. **What was implemented**:
+   - **Superadmin Login Audit & Fix**: Audited Superadmin account `admin@lamweb.com`. Verified record exists in `auth.users` (`683b891a-ed71-439c-84f6-e022adbd53d8`), confirmed at `2026-08-09T03:04:27Z`, active status. Diagnosis: password hash mismatch in Supabase Auth. Fixed by resetting password in Supabase Auth (`updateUserById`). Verified live sign in returning 200 SUCCESS and valid session token. Existing identity, ID, profile, and permissions preserved without deletion. Password remains managed solely by Supabase Auth and can be changed in `/control-panel/profile`. No credentials hardcoded.
+   - **Staff vs Customer Separation**: Kept `/staff-login` strictly for staff -> Control Panel and `/id/login` for customer identity (LAM ID).
+   - **Invite-Only Public Registration**: Updated `/id/register` with invite-only guard. Anonymous visitors without an invitation token see a notice: *"Account Creation by Invitation Only. New LAM accounts are created by invitation. Please contact LAM or use the invitation sent to your email."* Invited token holders (`/id/invite/[token]` or `/id/register?token=...`) can complete registration.
+   - **Staff-Controlled Customer & Demo Onboarding**: Built server action `onboardCustomerCompanyAction` in `lib/actions/customer-onboarding.ts` and Staff UI at `/control-panel/modules/ecosystem/companies/new`. Supports creating both Standard and Demo accounts (e.g. Unicore Enterprises demo preset button), configurable primary owner email, seat limits, optional demo expiry dates, credentials mode (Invite Link vs Temporary Initial Password), and triggers automated NEXORA provisioning (`notifyNexoraProvisioning`).
+   - **Demo Lifecycle & Suspension Controls**: Updated Customer Accounts list (`/control-panel/modules/ecosystem/companies`) with `DEMO` / `STANDARD` badges, entitlement expiry dates, and inline **Suspend** / **Reactivate** server action buttons to toggle company & entitlement status without record deletion.
+   - **Environment-Based URL Configuration**: Updated `sso_applications` redirect URIs in Supabase to include `https://nexora-nu-lime-63.vercel.app/api/auth/callback`. Updated `lib/sso/nexora-client.ts` to use `NEXT_PUBLIC_APP_URL` and `NEXORA_BASE_URL`.
+3. **User-visible routes added/changed**:
+   - `/id/register` (Invite-only notice & redemption)
+   - `/control-panel/modules/ecosystem/companies` (Demo badges, expiry dates & Suspend/Reactivate actions)
+   - `/control-panel/modules/ecosystem/companies/new` (Staff-controlled customer & demo onboarding form)
+4. **Important files created/modified**:
+   - `lib/actions/customer-onboarding.ts` [Onboarding & Status Toggle Server Actions]
+   - `app/control-panel/modules/ecosystem/companies/new/page.tsx` [Onboarding Page]
+   - `app/control-panel/modules/ecosystem/companies/new/OnboardingForm.tsx` [Interactive Onboarding Form Component]
+   - `app/control-panel/modules/ecosystem/companies/page.tsx` [Customer List with Lifecycle Quick Actions]
+   - `app/id/register/page.tsx` [Invite-Only Guard]
+   - `lib/sso/nexora-client.ts` [Environment Provisioning URL Update]
+   - `scripts/update-sso-redirects.ts` [SSO Application Redirect Updates]
+   - `supabase/migrations/20260811000003_demo_company_lifecycle.sql` [Demo Support Schema]
+5. **Database changes**:
+   - Applied migration `20260811000003_demo_company_lifecycle.sql`: Added `company_type` column to `crm_companies` and `expires_at` column to `customer_product_entitlements`.
+   - Updated `sso_applications`: Added `https://nexora-nu-lime-63.vercel.app/api/auth/callback` to allowed `redirect_uris`.
+6. **Authentication, roles and permissions**:
+   - Superadmin login preserved and password managed in Supabase Auth.
+   - Staff user management remains isolated in Control Panel.
+7. **Environment variables required**:
+   - `NEXT_PUBLIC_APP_URL` (LAM Base URL: `https://lubb-al-mandumah-lam.vercel.app`)
+   - `NEXORA_BASE_URL` (NEXORA Base URL: `https://nexora-nu-lime-63.vercel.app`)
+   - `NEXORA_PROVISIONING_URL` (Optional, defaults to `${NEXORA_BASE_URL}/api/inter-service/provisioning`)
+8. **Tests/build checks performed**:
+   - Superadmin password auth test: PASSED (200 SUCCESS).
+   - SSO redirect update test: PASSED.
+   - `npm run build`: Exit code 0 (Compiled successfully across static and dynamic routes).
+9. **Manual steps required from project owner**:
+   - Set `NEXT_PUBLIC_APP_URL=https://lubb-al-mandumah-lam.vercel.app` and `NEXORA_BASE_URL=https://nexora-nu-lime-63.vercel.app` in Vercel environment settings for LAM project.
+10. **Known issues & deferred items**: None.
+11. **Exact recommended next step**: Deploy to Vercel and conduct live verification with project owner.
+
 
 

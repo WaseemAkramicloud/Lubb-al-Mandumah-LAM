@@ -1,7 +1,13 @@
 import { signInterServicePayload } from '@/lib/sso/inter-service'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
-const NEXORA_PROVISIONING_URL = process.env.NEXORA_PROVISIONING_URL || 'https://nexora.lam.com/api/inter-service/provisioning'
+const getNexoraProvisioningUrl = () => {
+  if (process.env.NEXORA_PROVISIONING_URL) return process.env.NEXORA_PROVISIONING_URL
+  if (process.env.NEXORA_BASE_URL) return `${process.env.NEXORA_BASE_URL}/api/inter-service/provisioning`
+  return 'https://nexora-nu-lime-63.vercel.app/api/inter-service/provisioning'
+}
+
+const NEXORA_PROVISIONING_URL = getNexoraProvisioningUrl()
 
 export interface NexoraProvisioningPayload {
   action: 'activate' | 'suspend' | 'update_entitlement'

@@ -1,5 +1,6 @@
 import { requirePermission } from '@/lib/auth/permissions'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { toggleCompanyStatusAction } from '@/lib/actions/customer-onboarding'
 import Link from 'next/link'
 
 export const metadata = {
@@ -16,9 +17,9 @@ export default async function EcosystemCompaniesPage() {
   const { data: companies } = await adminClient
     .from('crm_companies')
     .select(`
-      id, company_id, name, legal_name, country, status, created_at,
+      id, company_id, name, legal_name, company_type, country, status, created_at,
       memberships:customer_company_memberships(id),
-      entitlements:customer_product_entitlements(id, product_slug, status)
+      entitlements:customer_product_entitlements(id, product_slug, status, plan_tier, expires_at)
     `)
     .order('created_at', { ascending: false })
 
@@ -35,9 +36,13 @@ export default async function EcosystemCompaniesPage() {
             Customer Accounts & Organizations
           </h1>
           <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)' }}>
-            Overview of central customer organizations registered in the LAM identity network.
+            Central administration of standard and demo customer accounts, entitlements, and lifecycle status.
           </p>
         </div>
+
+        <Link href="/control-panel/modules/ecosystem/companies/new" className="btn btn-primary" style={{ padding: '0.6rem 1.25rem' }}>
+          + Onboard Customer Account
+        </Link>
       </div>
 
       <div className="lam-card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -46,55 +51,89 @@ export default async function EcosystemCompaniesPage() {
             <tr style={{ background: 'var(--lam-surface-elevated)', borderBottom: '1px solid var(--lam-border)' }}>
               <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Company ID</th>
               <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Company Name</th>
-              <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Country</th>
+              <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Type</th>
               <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Members</th>
               <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Entitlements</th>
               <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Status</th>
-              <th style={{ textAlign: 'right', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Action</th>
+              <th style={{ textAlign: 'right', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {companies && companies.length > 0 ? (
-              companies.map((comp) => (
-                <tr key={comp.id} style={{ borderBottom: '1px solid var(--lam-border)' }}>
-                  <td style={{ padding: '0.85rem 1.25rem', fontFamily: 'monospace', color: 'var(--lam-gold)' }}>
-                    {comp.company_id || comp.id.slice(0, 8)}
-                  </td>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--lam-white)', fontWeight: 600 }}>
-                    {comp.name}
-                    {comp.legal_name && comp.legal_name !== comp.name ? (
-                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', fontWeight: 400 }}>{comp.legal_name}</div>
-                    ) : null}
-                  </td>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--lam-silver)' }}>
-                    {comp.country || 'N/A'}
-                  </td>
-                  <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', color: 'var(--lam-white)' }}>
-                    {comp.memberships ? comp.memberships.length : 0}
-                  </td>
-                  <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                    {comp.entitlements && comp.entitlements.length > 0 ? (
-                      comp.entitlements.map((e: any) => (
-                        <span key={e.id} className="badge badge-gold" style={{ fontSize: '10px', margin: '0 2px' }}>
-                          {e.product_slug.toUpperCase()}
-                        </span>
-                      ))
-                    ) : (
-                      <span style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>None</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
-                    <span className={`badge ${comp.status === 'Active' ? 'badge-success' : 'badge-warning'}`}>
-                      {comp.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>
-                    <Link href={`/control-panel/modules/leads-clients/companies/${comp.id}`} className="btn" style={{ padding: '0.25rem 0.5rem', fontSize: 'var(--text-xs)' }}>
-                      View Details
-                    </Link>
-                  </td>
-                </tr>
-              ))
+              companies.map((comp) => {
+                const isDemo = comp.company_type === 'demo'
+                const isSuspended = comp.status === 'Suspended' || comp.status === 'Inactive'
+
+                return (
+                  <tr key={comp.id} style={{ borderBottom: '1px solid var(--lam-border)' }}>
+                    <td style={{ padding: '0.85rem 1.25rem', fontFamily: 'monospace', color: 'var(--lam-gold)' }}>
+                      {comp.company_id || comp.id.slice(0, 8)}
+                    </td>
+                    <td style={{ padding: '0.85rem 1.25rem', color: 'var(--lam-white)', fontWeight: 600 }}>
+                      {comp.name}
+                      {comp.legal_name && comp.legal_name !== comp.name ? (
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', fontWeight: 400 }}>{comp.legal_name}</div>
+                      ) : null}
+                    </td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                      <span className={`badge ${isDemo ? 'badge-warning' : 'badge-gold'}`} style={{ fontSize: '10px' }}>
+                        {isDemo ? 'DEMO' : 'STANDARD'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', color: 'var(--lam-white)' }}>
+                      {comp.memberships ? comp.memberships.length : 0}
+                    </td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                      {comp.entitlements && comp.entitlements.length > 0 ? (
+                        comp.entitlements.map((e: any) => (
+                          <div key={e.id} style={{ display: 'inline-block', margin: '2px' }}>
+                            <span className="badge badge-gold" style={{ fontSize: '10px' }}>
+                              {e.product_slug.toUpperCase()} ({e.plan_tier})
+                            </span>
+                            {e.expires_at ? (
+                              <div style={{ fontSize: '9px', color: 'var(--lam-silver-dim)' }}>
+                                Exp: {new Date(e.expires_at).toLocaleDateString()}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))
+                      ) : (
+                        <span style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>None</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
+                      <span className={`badge ${isSuspended ? 'badge-warning' : 'badge-success'}`}>
+                        {comp.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <form action={async () => {
+                          'use server'
+                          await toggleCompanyStatusAction(comp.id, comp.status)
+                        }}>
+                          <button
+                            type="submit"
+                            className="btn"
+                            style={{
+                              padding: '0.25rem 0.5rem',
+                              fontSize: 'var(--text-xs)',
+                              background: isSuspended ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
+                              color: isSuspended ? '#2ecc71' : '#e74c3c',
+                              border: `1px solid ${isSuspended ? 'rgba(46, 204, 113, 0.3)' : 'rgba(231, 76, 60, 0.3)'}`
+                            }}
+                          >
+                            {isSuspended ? 'Reactivate' : 'Suspend'}
+                          </button>
+                        </form>
+                        <Link href={`/control-panel/modules/leads-clients/companies/${comp.id}`} className="btn" style={{ padding: '0.25rem 0.5rem', fontSize: 'var(--text-xs)' }}>
+                          Details
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })
             ) : (
               <tr>
                 <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--lam-silver-dim)' }}>
