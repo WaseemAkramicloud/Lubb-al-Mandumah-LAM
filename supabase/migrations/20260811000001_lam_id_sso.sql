@@ -270,7 +270,7 @@ VALUES
     'lam_app_nexora',
     'Nexora SaaS',
     'nexora',
-    ARRAY['https://nexora.lam.com/auth/callback', 'http://localhost:3001/auth/callback'],
+    ARRAY['https://nexora.lam.com/api/auth/callback', 'http://localhost:3000/api/auth/callback', 'http://localhost:3001/api/auth/callback'],
     'hash_nexora_secret_2026',
     true
   ),
@@ -278,7 +278,7 @@ VALUES
     'lam_app_atom',
     'ATOM Platform',
     'atom',
-    ARRAY['https://atom.lam.com/auth/callback', 'http://localhost:3002/auth/callback'],
+    ARRAY['https://atom.lam.com/api/auth/callback', 'http://localhost:3002/api/auth/callback'],
     'hash_atom_secret_2026',
     true
   ),
@@ -286,11 +286,11 @@ VALUES
     'lam_app_pointo',
     'PointO Systems',
     'pointo',
-    ARRAY['https://pointo.lam.com/auth/callback', 'http://localhost:3003/auth/callback'],
+    ARRAY['https://pointo.lam.com/api/auth/callback', 'http://localhost:3003/api/auth/callback'],
     'hash_pointo_secret_2026',
     true
   )
-ON CONFLICT (client_id) DO NOTHING;
+ON CONFLICT (client_id) DO UPDATE SET redirect_uris = EXCLUDED.redirect_uris;
 
 -- ============================================================================
 -- 10. UPDATED_AT TRIGGERS FOR NEW TABLES

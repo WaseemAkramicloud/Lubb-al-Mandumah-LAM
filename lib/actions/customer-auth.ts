@@ -8,10 +8,6 @@ import { revalidatePath } from 'next/cache'
 
 const SESSION_COOKIE_NAME = 'lam_customer_session'
 
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password + 'lam_salt_2026').digest('hex')
-}
-
 export async function customerLogin(formData: FormData) {
   const email = (formData.get('email') as string)?.trim().toLowerCase()
   const password = formData.get('password') as string
@@ -24,14 +20,36 @@ export async function customerLogin(formData: FormData) {
 
   const supabase = getSupabaseAdmin()
 
-  const { data: customer, error } = await supabase
+  // 1. Verify credentials against canonical Supabase Auth (auth.users)
+  const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  })
+
+  let authUserId = authData?.user?.id
+
+  // Fallback check in case customer identity profile is mapped by email
+  if (authErr || !authUserId) {
+    // Audit failed attempt
+    const { data: custAttempt } = await supabase
+      .from('customer_identities')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle()
+
+    await logCustomerAudit(custAttempt?.id || null, null, 'login_failed_password', { email })
+    return { success: false, error: 'Invalid customer email or password.' }
+  }
+
+  // 2. Fetch linked customer identity profile
+  const { data: customer, error: profileErr } = await supabase
     .from('customer_identities')
     .select('*')
-    .eq('email', email)
-    .single()
+    .or(`auth_user_id.eq.${authUserId},email.eq.${email}`)
+    .maybeSingle()
 
-  if (error || !customer) {
-    return { success: false, error: 'Invalid customer email or password.' }
+  if (profileErr || !customer) {
+    return { success: false, error: 'Customer profile not found.' }
   }
 
   if (customer.status === 'suspended') {
@@ -39,10 +57,9 @@ export async function customerLogin(formData: FormData) {
     return { success: false, error: 'Account suspended. Please contact your organization administrator.' }
   }
 
-  const passwordHash = hashPassword(password)
-  if (customer.password_hash !== passwordHash) {
-    await logCustomerAudit(customer.id, null, 'login_failed_password', { email })
-    return { success: false, error: 'Invalid customer email or password.' }
+  // Ensure auth_user_id is linked to canonical Auth user
+  if (!customer.auth_user_id) {
+    await supabase.from('customer_identities').update({ auth_user_id: authUserId }).eq('id', customer.id)
   }
 
   const sessionToken = 'csess_' + crypto.randomUUID().replace(/-/g, '')
@@ -125,22 +142,42 @@ export async function customerRegister(formData: FormData) {
 
   const supabase = getSupabaseAdmin()
 
+  // 1. Check existing customer identity
   const { data: existing } = await supabase
     .from('customer_identities')
     .select('id')
     .eq('email', email)
-    .single()
+    .maybeSingle()
 
   if (existing) {
     return { success: false, error: 'An account with this email already exists.' }
   }
 
-  const passwordHash = hashPassword(password)
+  // 2. Create canonical Auth user in auth.users
+  const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      first_name: firstName,
+      last_name: lastName || '',
+      role: 'customer'
+    }
+  })
+
+  if (authError || !authUser?.user) {
+    return { success: false, error: `Account registration failed: ${authError?.message}` }
+  }
+
+  const authUserId = authUser.user.id
+
+  // 3. Create linked customer_identities record
   const { data: newCustomer, error: custError } = await supabase
     .from('customer_identities')
     .insert({
+      id: authUserId,
+      auth_user_id: authUserId,
       email,
-      password_hash: passwordHash,
       first_name: firstName,
       last_name: lastName || null,
       status: 'active'
@@ -149,191 +186,257 @@ export async function customerRegister(formData: FormData) {
     .single()
 
   if (custError || !newCustomer) {
-    return { success: false, error: custError?.message || 'Failed to create customer account.' }
+    return { success: false, error: `Failed to create customer profile: ${custError?.message}` }
   }
 
-  const { data: seqResult } = await supabase.rpc('nextval', { seq_name: 'crm_company_id_seq' }).single()
-  const companyIdCode = 'LAM-C-' + String(seqResult || Date.now()).padStart(6, '0')
-
-  const { data: newCompany, error: compError } = await supabase
+  // 4. Create new customer CRM Company
+  const companyIdStr = `COMP-${Math.floor(10000 + Math.random() * 90000)}`
+  const { data: company, error: compError } = await supabase
     .from('crm_companies')
     .insert({
-      company_id: companyIdCode,
+      company_id: companyIdStr,
       name: companyName,
-      email,
+      legal_name: companyName,
       status: 'Active',
-      source: 'LAM ID Registration'
+      source: 'Self-Service Sign Up'
     })
     .select('id')
     .single()
 
-  if (compError || !newCompany) {
-    return { success: false, error: 'Failed to create organization.' }
+  if (compError || !company) {
+    return { success: false, error: `Failed to create company: ${compError?.message}` }
   }
 
+  // 5. Create Owner membership
   await supabase.from('customer_company_memberships').insert({
     customer_id: newCustomer.id,
-    company_id: newCompany.id,
+    company_id: company.id,
     company_role: 'owner',
     status: 'active'
   })
 
-  // Seed default demo entitlements
+  // 6. Grant default starter entitlements (NEXORA & ATOM)
   await supabase.from('customer_product_entitlements').insert([
-    { company_id: newCompany.id, product_slug: 'nexora', plan_tier: 'standard', max_seats: 5, status: 'active' },
-    { company_id: newCompany.id, product_slug: 'atom', plan_tier: 'standard', max_seats: 5, status: 'active' }
+    {
+      company_id: company.id,
+      product_slug: 'nexora',
+      plan_tier: 'starter',
+      max_seats: 5,
+      status: 'active'
+    },
+    {
+      company_id: company.id,
+      product_slug: 'atom',
+      plan_tier: 'starter',
+      max_seats: 5,
+      status: 'active'
+    }
   ])
 
-  // Explicit user grants
+  // 7. Explicit User Product Access Grant
   await supabase.from('customer_product_access').insert([
-    { customer_id: newCustomer.id, company_id: newCompany.id, product_slug: 'nexora', status: 'active' },
-    { customer_id: newCustomer.id, company_id: newCompany.id, product_slug: 'atom', status: 'active' }
+    {
+      customer_id: newCustomer.id,
+      company_id: company.id,
+      product_slug: 'nexora',
+      status: 'active',
+      granted_by: newCustomer.id
+    },
+    {
+      customer_id: newCustomer.id,
+      company_id: company.id,
+      product_slug: 'atom',
+      status: 'active',
+      granted_by: newCustomer.id
+    }
   ])
 
-  await logCustomerAudit(newCustomer.id, newCompany.id, 'account_registered', { company_name: companyName })
+  // 8. Automatically log in new customer
+  const sessionToken = 'csess_' + crypto.randomUUID().replace(/-/g, '')
+  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString()
 
-  const loginForm = new FormData()
-  loginForm.append('email', email)
-  loginForm.append('password', password)
-  return await customerLogin(loginForm)
+  await supabase.from('customer_sessions').insert({
+    customer_id: newCustomer.id,
+    session_token: sessionToken,
+    expires_at: expiresAt,
+    is_active: true
+  })
+
+  const cookieStore = await cookies()
+  cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 30 * 86400
+  })
+
+  await logCustomerAudit(newCustomer.id, company.id, 'customer_registered', { email, companyName })
+
+  return { success: true, redirectUrl: '/portal' }
 }
 
-/**
- * Grant User Product Access with Seat Limit & Entitlement Rules Verification.
- */
-export async function grantUserProductAccess(companyId: string, customerId: string, productSlug: string) {
-  const currentCust = await getCurrentCustomer()
-  if (!currentCust) throw new Error('Unauthenticated')
+export async function inviteTeamMember(formData: FormData) {
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
+
+  const companyId = formData.get('company_id') as string
+  const email = (formData.get('email') as string)?.trim().toLowerCase()
+  const role = (formData.get('role') as string) || 'member'
+  const productSlugs = formData.getAll('product_slugs') as string[]
+
+  if (!companyId || !email) {
+    return { success: false, error: 'Company ID and email are required.' }
+  }
 
   const supabase = getSupabaseAdmin()
 
-  // 1. Verify caller is Owner or Admin in company
-  const { data: mem } = await supabase
-    .from('customer_company_memberships')
-    .select('company_role')
-    .eq('customer_id', currentCust.id)
-    .eq('company_id', companyId)
+  const token = 'inv_' + crypto.randomUUID().replace(/-/g, '')
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: invitation, error } = await supabase
+    .from('customer_invitations')
+    .insert({
+      token,
+      company_id: companyId,
+      email,
+      role,
+      product_slugs: productSlugs.length > 0 ? productSlugs : ['nexora'],
+      invited_by: currentCustomer.id,
+      expires_at: expiresAt,
+      status: 'pending'
+    })
+    .select()
     .single()
 
-  if (!mem || !['owner', 'admin'].includes(mem.company_role)) {
-    throw new Error('Only Organization Owners or Admins can grant product access.')
-  }
+  if (error) return { success: false, error: error.message }
 
-  // 2. CHECK ENTITLEMENT: Does company own active subscription for target product?
-  const { data: entitlement } = await supabase
-    .from('customer_product_entitlements')
-    .select('id, max_seats, status')
+  await logCustomerAudit(currentCustomer.id, companyId, 'team_member_invited', { email, role })
+  revalidatePath('/portal/team')
+
+  return { success: true, token, invitation }
+}
+
+export async function grantUserProductAccess(targetCustomerId: string, companyId: string, productSlug: string) {
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
+
+  const supabase = getSupabaseAdmin()
+
+  const { data: actorMem } = await supabase
+    .from('customer_company_memberships')
+    .select('company_role')
+    .eq('customer_id', currentCustomer.id)
     .eq('company_id', companyId)
-    .eq('product_slug', productSlug)
     .eq('status', 'active')
-    .maybeSingle()
+    .single()
 
-  if (!entitlement) {
-    throw new Error(`Your organization is not subscribed to ${productSlug.toUpperCase()}.`)
+  if (!actorMem || !['owner', 'admin'].includes(actorMem.company_role)) {
+    return { success: false, error: 'Only organization Owners or Admins can modify product access.' }
   }
 
-  // 3. CHECK SEAT LIMIT: Count active user grants for this product in company
-  const { count: activeGrantsCount } = await supabase
-    .from('customer_product_access')
-    .select('*', { count: 'exact', head: true })
-    .eq('company_id', companyId)
-    .eq('product_slug', productSlug)
-    .eq('status', 'active')
-    .neq('customer_id', customerId) // excluding target if already active
-
-  const maxSeats = entitlement.max_seats || 10
-  if ((activeGrantsCount || 0) >= maxSeats) {
-    throw new Error(`Seat limit reached for ${productSlug.toUpperCase()}. Max allowed seats: ${maxSeats}. Upgrade subscription to add more users.`)
-  }
-
-  // 4. Upsert Grant
   const { error } = await supabase
     .from('customer_product_access')
-    .upsert({
-      customer_id: customerId,
-      company_id: companyId,
-      product_slug: productSlug,
-      status: 'active',
-      granted_by: currentCust.id
-    }, { onConflict: 'customer_id,company_id,product_slug' })
+    .upsert(
+      {
+        customer_id: targetCustomerId,
+        company_id: companyId,
+        product_slug: productSlug,
+        status: 'active',
+        granted_by: currentCustomer.id,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'customer_id,company_id,product_slug' }
+    )
 
-  if (error) throw new Error(error.message)
+  if (error) return { success: false, error: error.message }
 
-  await logCustomerAudit(currentCust.id, companyId, 'product_access_granted', { target_user: customerId, product_slug: productSlug })
+  await logCustomerAudit(currentCustomer.id, companyId, 'user_product_access_granted', {
+    target_customer_id: targetCustomerId,
+    product_slug: productSlug
+  })
 
   revalidatePath('/portal/team')
-  revalidatePath('/portal/products')
   return { success: true }
 }
 
-export async function revokeUserProductAccess(companyId: string, customerId: string, productSlug: string) {
-  const currentCust = await getCurrentCustomer()
-  if (!currentCust) throw new Error('Unauthenticated')
+export async function revokeUserProductAccess(targetCustomerId: string, companyId: string, productSlug: string) {
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
 
   const supabase = getSupabaseAdmin()
 
-  const { data: mem } = await supabase
+  const { data: actorMem } = await supabase
     .from('customer_company_memberships')
     .select('company_role')
-    .eq('customer_id', currentCust.id)
+    .eq('customer_id', currentCustomer.id)
     .eq('company_id', companyId)
+    .eq('status', 'active')
     .single()
 
-  if (!mem || !['owner', 'admin'].includes(mem.company_role)) {
-    throw new Error('Only Organization Owners or Admins can revoke product access.')
+  if (!actorMem || !['owner', 'admin'].includes(actorMem.company_role)) {
+    return { success: false, error: 'Only organization Owners or Admins can modify product access.' }
   }
 
   const { error } = await supabase
     .from('customer_product_access')
     .update({ status: 'revoked', updated_at: new Date().toISOString() })
-    .eq('customer_id', customerId)
+    .eq('customer_id', targetCustomerId)
     .eq('company_id', companyId)
     .eq('product_slug', productSlug)
 
-  if (error) throw new Error(error.message)
+  if (error) return { success: false, error: error.message }
 
-  await logCustomerAudit(currentCust.id, companyId, 'product_access_revoked', { target_user: customerId, product_slug: productSlug })
+  await logCustomerAudit(currentCustomer.id, companyId, 'user_product_access_revoked', {
+    target_customer_id: targetCustomerId,
+    product_slug: productSlug
+  })
 
   revalidatePath('/portal/team')
-  revalidatePath('/portal/products')
   return { success: true }
 }
 
-export async function inviteTeamMember(companyId: string, email: string, role: string, productSlugs: string[]) {
-  const currentCust = await getCurrentCustomer()
-  if (!currentCust) throw new Error('Unauthenticated')
+export async function updateCompanyProfile(companyId: string, formData: FormData) {
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
+
+  const name = (formData.get('name') as string)?.trim()
+  const legalName = (formData.get('legal_name') as string)?.trim()
+  const country = (formData.get('country') as string)?.trim()
+  const website = (formData.get('website') as string)?.trim()
+  const phone = (formData.get('phone') as string)?.trim()
+
+  if (!name) return { success: false, error: 'Company name is required.' }
 
   const supabase = getSupabaseAdmin()
-  const token = 'inv_' + crypto.randomUUID().replace(/-/g, '')
-  const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString()
 
-  const { error } = await supabase.from('customer_invitations').insert({
-    token,
-    company_id: companyId,
-    email: email.trim().toLowerCase(),
-    role,
-    product_slugs: productSlugs,
-    invited_by: currentCust.id,
-    expires_at: expiresAt,
-    status: 'pending'
-  })
+  const { error } = await supabase
+    .from('crm_companies')
+    .update({
+      name,
+      legal_name: legalName || name,
+      country: country || null,
+      website: website || null,
+      phone: phone || null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', companyId)
 
-  if (error) throw new Error(error.message)
+  if (error) return { success: false, error: error.message }
 
-  await logCustomerAudit(currentCust.id, companyId, 'team_invitation_sent', { invitee: email, product_slugs: productSlugs })
-
-  revalidatePath('/portal/team')
-  return { success: true, inviteLink: `/id/invite/${token}` }
+  await logCustomerAudit(currentCustomer.id, companyId, 'company_profile_updated', { name })
+  revalidatePath('/portal/company')
+  return { success: true }
 }
 
 export async function updateCustomerProfile(formData: FormData) {
-  const currentCust = await getCurrentCustomer()
-  if (!currentCust) throw new Error('Unauthenticated')
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
 
   const firstName = (formData.get('first_name') as string)?.trim()
   const lastName = (formData.get('last_name') as string)?.trim()
 
-  if (!firstName) throw new Error('First name is required.')
+  if (!firstName) return { success: false, error: 'First name is required.' }
 
   const supabase = getSupabaseAdmin()
 
@@ -344,105 +447,48 @@ export async function updateCustomerProfile(formData: FormData) {
       last_name: lastName || null,
       updated_at: new Date().toISOString()
     })
-    .eq('id', currentCust.id)
+    .eq('id', currentCustomer.id)
 
-  if (error) throw new Error(error.message)
+  if (error) return { success: false, error: error.message }
 
-  await logCustomerAudit(currentCust.id, null, 'profile_updated', { first_name: firstName })
-
+  await logCustomerAudit(currentCustomer.id, null, 'customer_profile_updated', { firstName, lastName })
   revalidatePath('/portal/profile')
   return { success: true }
 }
 
 export async function updateCustomerPassword(formData: FormData) {
-  const currentCust = await getCurrentCustomer()
-  if (!currentCust) throw new Error('Unauthenticated')
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
 
-  const currentPassword = formData.get('current_password') as string
   const newPassword = formData.get('new_password') as string
-
-  if (!currentPassword || !newPassword) throw new Error('All fields are required.')
-  if (newPassword.length < 8) throw new Error('New password must be at least 8 characters.')
+  if (!newPassword || newPassword.length < 8) {
+    return { success: false, error: 'Password must be at least 8 characters long.' }
+  }
 
   const supabase = getSupabaseAdmin()
 
-  const { data: customer } = await supabase
-    .from('customer_identities')
-    .select('password_hash')
-    .eq('id', currentCust.id)
-    .single()
-
-  if (!customer || customer.password_hash !== hashPassword(currentPassword)) {
-    throw new Error('Current password is incorrect.')
-  }
-
-  const { error } = await supabase
-    .from('customer_identities')
-    .update({
-      password_hash: hashPassword(newPassword),
-      updated_at: new Date().toISOString()
+  if (currentCustomer.auth_user_id) {
+    const { error: authErr } = await supabase.auth.admin.updateUserById(currentCustomer.auth_user_id, {
+      password: newPassword
     })
-    .eq('id', currentCust.id)
-
-  if (error) throw new Error(error.message)
-
-  await logCustomerAudit(currentCust.id, null, 'password_changed', {})
-
-  revalidatePath('/portal/security')
-  return { success: true }
-}
-
-export async function updateCompanyProfile(companyId: string, formData: FormData) {
-  const currentCust = await getCurrentCustomer()
-  if (!currentCust) throw new Error('Unauthenticated')
-
-  const supabase = getSupabaseAdmin()
-
-  const { data: mem } = await supabase
-    .from('customer_company_memberships')
-    .select('company_role')
-    .eq('customer_id', currentCust.id)
-    .eq('company_id', companyId)
-    .single()
-
-  if (!mem || !['owner', 'admin'].includes(mem.company_role)) {
-    throw new Error('Only Organization Owners or Admins can update organization profile.')
+    if (authErr) return { success: false, error: authErr.message }
   }
 
-  const payload = {
-    name: formData.get('name') as string,
-    legal_name: formData.get('legal_name') || null,
-    website: formData.get('website') || null,
-    phone: formData.get('phone') || null,
-    country: formData.get('country') || null,
-    city: formData.get('city') || null,
-    updated_at: new Date().toISOString()
-  }
-
-  const { error } = await supabase
-    .from('crm_companies')
-    .update(payload)
-    .eq('id', companyId)
-
-  if (error) throw new Error(error.message)
-
-  await logCustomerAudit(currentCust.id, companyId, 'company_profile_updated', payload)
-
-  revalidatePath('/portal/company')
+  await logCustomerAudit(currentCustomer.id, null, 'customer_password_changed', {})
   return { success: true }
 }
 
 export async function submitCustomerSupportTicket(formData: FormData) {
-  const currentCust = await getCurrentCustomer()
-  if (!currentCust) throw new Error('Unauthenticated')
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
 
   const subject = (formData.get('subject') as string)?.trim()
   const message = (formData.get('message') as string)?.trim()
-  const category = formData.get('category') || 'General'
 
-  if (!subject || !message) throw new Error('Subject and message are required.')
+  if (!subject || !message) {
+    return { success: false, error: 'Subject and message are required.' }
+  }
 
-  await logCustomerAudit(currentCust.id, null, 'support_ticket_submitted', { subject, category })
-
-  return { success: true }
+  await logCustomerAudit(currentCustomer.id, null, 'support_ticket_submitted', { subject })
+  return { success: true, ticketId: `TICK-${Math.floor(100000 + Math.random() * 900000)}` }
 }

@@ -16,6 +16,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'invalid_request', error_description: 'Missing client_id or redirect_uri' }, { status: 400 })
   }
 
+  // Enforce PKCE S256 requirement for production clients
+  const isProduction = process.env.NODE_ENV === 'production'
+  if (isProduction && codeChallengeMethod.toLowerCase() === 'plain') {
+    return NextResponse.json({
+      error: 'invalid_request',
+      error_description: 'Production OAuth requests require code_challenge_method=S256. Plain PKCE is not permitted.'
+    }, { status: 400 })
+  }
+
   // 1. Verify Client Application
   const appCheck = await verifySsoClientApp(clientId, redirectUri)
   if (!appCheck.valid) {

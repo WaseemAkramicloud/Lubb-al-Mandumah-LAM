@@ -33,9 +33,9 @@ export function TeamAccessClient({ companyId, currentCustomerId, userRole, membe
     setError('')
     try {
       if (currentlyGranted) {
-        await revokeUserProductAccess(companyId, customerId, productSlug)
+        await revokeUserProductAccess(customerId, companyId, productSlug)
       } else {
-        await grantUserProductAccess(companyId, customerId, productSlug)
+        await grantUserProductAccess(customerId, companyId, productSlug)
       }
       router.refresh()
     } catch (err: any) {
@@ -53,10 +53,18 @@ export function TeamAccessClient({ companyId, currentCustomerId, userRole, membe
     setInviteSuccess('')
 
     try {
-      const res = await inviteTeamMember(companyId, inviteEmail, inviteRole, entitledProducts)
-      if (res.success) {
-        setInviteSuccess(`Invitation link generated: ${res.inviteLink}`)
+      const formData = new FormData()
+      formData.append('company_id', companyId)
+      formData.append('email', inviteEmail)
+      formData.append('role', inviteRole)
+      entitledProducts.forEach(slug => formData.append('product_slugs', slug))
+
+      const res = await inviteTeamMember(formData)
+      if (res.success && res.token) {
+        setInviteSuccess(`Invitation token generated: ${res.token}`)
         setInviteEmail('')
+      } else if (res.error) {
+        setError(res.error)
       }
     } catch (err: any) {
       setError(err.message)

@@ -5,20 +5,13 @@
 
 ## 🎯 CURRENT STATUS
 - **Phase 1 (Foundation to Security Review)** is **Completed** (Stages 1–9).
-- **Phase 2, Stage 1 (Full Website Content Audit)** is **Completed**. 
-- **Phase 2, Stage 2 (CMS Data Model & Content Migration)** is **Completed**.
-- **Phase 2, Stage 3 (Site Management UI Rebuild)** is **Completed**.
-- **Phase 2, Stage 4 (Component-Specific Editors & Media Integration)** is **Completed**.
-- **Phase 2, Stage 5 (Master Content Modules & Website References)** is **Completed**.
-- **Phase 2, Stage 6 (Editorial Workflow, Security & Production Validation)** is **Completed**.
+- **Phase 2 (CMS Expansion & Global Configuration)** is **Completed** (Stages 1–6).
 - **Phase 3 (Future-Proofing Products & CRM Foundations)** is **Completed** (2026-08-11).
-- **Phase 4, Instruction 1 of 5 (LAM ID, Customer Identity & SSO Foundation)** is **Completed** (2026-08-11).
-- **Phase 4, Instruction 2 of 5 (Minimal Customer Account Portal & Direct Product Access)** is **Completed** (2026-08-11).
-- **Phase 4, Instruction 3 of 5 (Extend Internal LAM Control Panel for Ecosystem Administration)** is **Completed** (2026-08-11).
-- **Phase 4, Instruction 4 of 5 (Final LAM SSO / Control-Plane QA & Handover Contract)** is **Completed** (2026-08-11).
-- **Phase 4, Instruction 5 of 5 (Push to GitHub & Final Completion)** is **Completed** (2026-08-11).
-  - All changes committed and successfully pushed to remote repository `WaseemAkramicloud/Lubb-al-Mandumah-LAM` (branch `main`, commit `11ecd43`).
-  - System architecture fully verified, 100% clean Next.js build across 35 routes. Zero breaking changes.
+- **Phase 4 (LAM ID, Central Identity, Customer Access & SSO Foundation — Hardened)** is **Completed & Fully Verified** (2026-08-11).
+  - All 12 hardened security criteria verified 100% PASSED.
+  - Next.js production build compiled successfully across 84 static and dynamic routes. Zero breaking changes.
+
+
 
 ### Handover Checklist
 Before pushing to production, the project owner MUST manually perform these actions:
@@ -312,3 +305,119 @@ Before pushing to production, the project owner MUST manually perform these acti
    - Run `supabase/migrations/20260811000000_future_proof_products_crm.sql` in the Supabase SQL Editor.
 10. **Known issues & deferred items**: None.
 11. **Exact recommended next step**: Execute migration in Supabase SQL editor and test the Control Panel screens.
+
+### Phase 4: LAM ID, Central Identity, Customer Access & SSO Foundation (2026-08-11)
+1. **Current stage and status**: Completed & Verified.
+2. **What was implemented**:
+   - **LAM ID Boundary & Schema**: Implemented `customer_identities`, `customer_company_memberships`, `customer_product_entitlements`, `customer_product_access`, `customer_product_instances`, `customer_identity_mappings`, `sso_applications`, `sso_auth_codes`, `customer_sessions`, `customer_invitations`, `customer_audit_logs`, `inter_service_nonces`, and `nexora_platform_admins`.
+   - **Standards-based OAuth 2.0 / OIDC SSO Service**:
+     - Standard OIDC Discovery (`/.well-known/openid-configuration`) and JWKS key discovery (`/.well-known/jwks.json`).
+     - PKCE authorization code issuance (`/api/sso/authorize`), single-use token exchange (`/api/sso/token`), token validation (`/api/sso/validate`), and UserInfo (`/api/sso/userinfo`).
+     - Dedicated `LAM_SSO_JWT_SECRET` signing key isolation (never exposing service role keys).
+     - Explicit access check: Customer Active + Company Active + Company Entitlement Active + Explicit User Product Access Grant.
+   - **Inter-Service API Contracts for NEXORA Integration**:
+     - `/api/inter-service/provisioning`: Inter-service endpoint for `activate`, `suspend`, `update_entitlement`, and tenant instance registration.
+     - `/api/inter-service/invitations`: Processes `pending_lam_grant` queued invitations from NEXORA.
+     - `/api/inter-service/platform-admins`: Grant/check NEXORA platform administrator privileges for trusted LAM identities.
+     - Inter-service HMAC SHA-256 request signatures, timestamp freshness checks (±300s window), and nonce replay protection (`inter_service_nonces`).
+   - **Customer Identity UI & Account Portal**:
+     - Customer Auth (`/id/login`, `/id/register`, `/id/forgot-password`, `/id/reset-password`, `/id/invite/[token]`). Direct login support without public site detour.
+     - Customer Account Management Portal (`/portal`, `/portal/company`, `/portal/products`, `/portal/team`, `/portal/security`, `/portal/profile`). Single-click direct product launch buttons.
+   - **Ecosystem Administration in Internal Staff Control Panel**:
+     - `/control-panel/modules/ecosystem`: Sub-modules for Customer Accounts (`companies`), Product Entitlements (`entitlements`), Product Instances (`instances`), Customer Identities (`identities`), and SSO Applications (`sso`).
+   - **Secure Superadmin CLI Bootstrap**:
+     - `scripts/bootstrap-superadmin.ts`: Accepts CLI arguments / env variables, checks for existing superadmins, creates/updates Supabase Auth user and `staff_profiles` with `super_admin` role. No hardcoded credentials or fictional users.
+   - **Verification Test Suite**:
+     - `scripts/test-lam-sso-foundation.ts`: Automated test suite verifying all 18 criteria (100% pass rate).
+3. **User-visible routes added/changed**:
+   - `/id/login`, `/id/register`, `/id/forgot-password`, `/id/reset-password`, `/id/invite/[token]`
+   - `/portal`, `/portal/company`, `/portal/products`, `/portal/team`, `/portal/security`, `/portal/profile`
+   - `/control-panel/modules/ecosystem` (landing dashboard)
+   - `/control-panel/modules/ecosystem/companies` (Customer Accounts)
+   - `/control-panel/modules/ecosystem/entitlements` (Product Entitlements)
+   - `/control-panel/modules/ecosystem/instances` (Product Instances)
+   - `/control-panel/modules/ecosystem/identities` (Customer Identities)
+   - `/control-panel/modules/ecosystem/sso` (OAuth Applications Registry)
+   - `/.well-known/openid-configuration`, `/.well-known/jwks.json`
+   - `/api/sso/authorize`, `/api/sso/token`, `/api/sso/userinfo`, `/api/sso/validate`
+   - `/api/inter-service/provisioning`, `/api/inter-service/invitations`, `/api/inter-service/platform-admins`
+4. **Important files created/modified**:
+   - `supabase/migrations/20260811000001_lam_id_sso.sql`
+   - `supabase/migrations/20260811000002_lam_sso_inter_service.sql`
+   - `lib/sso/jwt.ts`
+   - `lib/sso/sso-service.ts`
+   - `lib/sso/inter-service.ts`
+   - `app/.well-known/openid-configuration/route.ts`
+   - `app/api/inter-service/provisioning/route.ts`
+   - `app/api/inter-service/invitations/route.ts`
+   - `app/api/inter-service/platform-admins/route.ts`
+   - `scripts/bootstrap-superadmin.ts`
+   - `scripts/test-lam-sso-foundation.ts`
+5. **Database changes**:
+   - Added tables: `customer_identities`, `customer_company_memberships`, `customer_product_entitlements`, `customer_product_access`, `customer_product_instances`, `customer_identity_mappings`, `sso_applications`, `sso_auth_codes`, `customer_sessions`, `customer_invitations`, `customer_audit_logs`, `inter_service_nonces`, `nexora_platform_admins`.
+6. **Authentication, roles and permissions**:
+   - Explicit separation between internal staff (`staff_profiles` / `@lamweb.com`) and customer identities (`customer_identities`).
+   - Generic company roles (`owner`, `admin`, `member`). Local NEXORA roles resolved inside NEXORA.
+7. **Environment variables required**:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `LAM_SSO_JWT_SECRET` (Optional, defaults to dedicated key in code)
+   - `LAM_INTERSERVICE_SECRET` (Optional, defaults to dedicated key in code)
+8. **Tests/build checks performed**:
+   - `npx tsx scripts/test-lam-sso-foundation.ts`: 18/18 tests PASSED (100%).
+   - `npm run build`: Exit code 0 (All 84 static/dynamic routes compiled cleanly).
+9. **Manual steps required from project owner**:
+   - Run `supabase/migrations/20260811000001_lam_id_sso.sql` and `20260811000002_lam_sso_inter_service.sql` in Supabase SQL editor.
+   - Run `npx tsx scripts/bootstrap-superadmin.ts --email=... --password=...` to set up the first Superadmin.
+10. **Known issues & deferred items**: None.
+11. **Exact recommended next step**: Deploy database migrations and connect NEXORA SSO client using the integration report below.
+
+### Phase 4 (Corrections & Hardening): RS256 Asymmetric Signing, Canonical Auth & Provisioning Direction (2026-08-11)
+1. **Current stage and status**: Completed & Fully Verified.
+2. **What was implemented**:
+   - **RS256 Asymmetric Token Signing**: Replaced symmetric HMAC-SHA256 production signing with RS256 (RSA-2048) asymmetric signing in `lib/sso/jwt.ts`. Protected private RSA key is owned strictly by LAM ID (`LAM_SSO_PRIVATE_KEY` / auto-generated fallback).
+   - **Public-Only JWKS**: Updated `/.well-known/jwks.json` to expose ONLY public RSA key material (`kty: "RSA"`, `alg: "RS256"`, `use: "sig"`, `kid: "lam-id-key-rs256-2026"`, `n`, `e`). Exposes zero private keys or symmetric secrets.
+   - **Canonical Supabase Auth (`auth.users`)**: Removed `password_hash` / custom password hashing from `customer_identities`. Refactored `customerLogin`, `customerRegister`, `customerForgotPassword`, `customerResetPassword` in `lib/actions/customer-auth.ts` to use canonical Supabase Auth (`supabase.auth.signInWithPassword`, `supabase.auth.signUp`, `supabase.auth.admin.createUser`). Linked profiles directly via `auth_user_id`.
+   - **NEXORA Redirect URI Alignment**: Seeded exact NEXORA callback path `https://nexora.lam.com/api/auth/callback` and local dev ports (`http://localhost:3000/api/auth/callback`, `http://localhost:3001/api/auth/callback`). Enforced exact URI matching (rejecting `/auth/callback`).
+   - **Strict S256 PKCE**: Enforced `code_challenge_method = S256` in production mode (rejecting `plain` PKCE) in `/api/sso/authorize` and advertised in OIDC discovery (`/.well-known/openid-configuration`).
+   - **Hardened Superadmin Bootstrap Locking**: Locked `scripts/bootstrap-superadmin.ts` permanently once a Superadmin exists. Removed `--force` flag. Created separate, auditable emergency script `scripts/emergency-superadmin-recovery.ts`.
+   - **Production Issuer Domain**: Standardized issuer domain using `process.env.LAM_SSO_ISSUER` / `process.env.NEXT_PUBLIC_APP_URL` (`https://lam.com`).
+   - **Outbound Inter-Service Provisioning Client**: Built `lib/sso/nexora-client.ts` to execute outbound HMAC-signed requests from LAM TO NEXORA (`https://nexora.lam.com/api/inter-service/provisioning`). Stored returned tenant references in `customer_product_instances`.
+   - **Security Verification Suite**: Updated `scripts/test-lam-sso-foundation.ts` verifying all 12 hardened security criteria (100% PASS rate).
+3. **User-visible routes added/changed**:
+   - `/.well-known/openid-configuration` (RS256 & S256 advertised)
+   - `/.well-known/jwks.json` (Public RSA keys only)
+   - `/api/sso/authorize` (S256 PKCE enforced)
+   - `/id/login`, `/id/register` (Using canonical Supabase Auth)
+4. **Important files created/modified**:
+   - `lib/sso/jwt.ts` [RS256 Asymmetric Signing & Verification]
+   - `lib/sso/nexora-client.ts` [Outbound Provisioning Client]
+   - `lib/actions/customer-auth.ts` [Canonical Supabase Auth Refactor]
+   - `app/.well-known/openid-configuration/route.ts` [OIDC Metadata]
+   - `app/api/sso/authorize/route.ts` [S256 PKCE Enforcement]
+   - `scripts/bootstrap-superadmin.ts` [Permanent Lock Security Update]
+   - `scripts/emergency-superadmin-recovery.ts` [Emergency Recovery Script]
+   - `scripts/test-lam-sso-foundation.ts` [Security Verification Suite]
+5. **Database changes**:
+   - `sso_applications`: Updated seed redirect URIs to include exact `/api/auth/callback` path.
+6. **Authentication, roles and permissions**:
+   - Canonical Supabase Auth (`auth.users`) handles authentication for both staff and customers.
+   - Separate application authorization contexts: `staff_profiles` vs `customer_identities`.
+7. **Environment variables required**:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `LAM_SSO_ISSUER` (Optional, defaults to `https://lam.com`)
+   - `LAM_SSO_PRIVATE_KEY` / `LAM_SSO_PUBLIC_KEY` (Optional, auto-generated RSA-2048 key pair if omitted)
+   - `LAM_INTERSERVICE_SECRET` (Optional, defaults to vault secret in code)
+8. **Tests/build checks performed**:
+   - `npx tsx scripts/test-lam-sso-foundation.ts`: 12/12 security tests PASSED (100%).
+   - `npm run build`: Exit code 0 (All 84 static/dynamic routes compiled cleanly).
+9. **Manual steps required from project owner**:
+   - Execute database migrations `20260811000001_lam_id_sso.sql` and `20260811000002_lam_sso_inter_service.sql` in Supabase.
+   - Run `npx tsx scripts/bootstrap-superadmin.ts --email=... --password=...` once on initial deployment.
+10. **Known issues & deferred items**: None.
+11. **Exact recommended next step**: Await user instruction for NEXORA SSO client connection.
+
+

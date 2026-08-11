@@ -33,10 +33,11 @@ export async function POST(request: NextRequest) {
       valid: true,
       sub: payload.sub,
       email: payload.email,
-      first_name: payload.first_name,
-      last_name: payload.last_name,
+      given_name: payload.given_name,
+      family_name: payload.family_name,
       company_id: payload.company_id,
       company_role: payload.company_role,
+      is_nexora_platform_admin: !!payload.is_nexora_platform_admin,
       granted_products: payload.products || []
     })
   } catch (err: any) {

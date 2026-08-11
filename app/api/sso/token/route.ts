@@ -80,16 +80,25 @@ export async function POST(request: NextRequest) {
       if (mem) companyRole = mem.company_role
     }
 
-    // 3. Issue Signed OIDC JWT ID Token & Access Token
+    // 3. Check if user is a NEXORA platform administrator
+    const { data: adminGrant } = await supabase
+      .from('nexora_platform_admins')
+      .select('id')
+      .eq('customer_id', customer.id)
+      .eq('status', 'active')
+      .maybeSingle()
+
+    // 4. Issue Signed OIDC JWT ID Token & Access Token
     const tokenPayload = {
       sub: customer.id,
       aud: client_id,
       email: customer.email,
-      first_name: customer.first_name,
-      last_name: customer.last_name,
+      given_name: customer.first_name,
+      family_name: customer.last_name,
       company_id: authCode.company_id,
       company_role: companyRole,
       products: grantedProducts,
+      is_nexora_platform_admin: !!adminGrant,
       exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour token
     }
 
