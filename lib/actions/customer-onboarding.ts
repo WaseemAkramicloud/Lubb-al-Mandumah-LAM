@@ -52,29 +52,61 @@ export async function onboardCustomerCompanyAction(
 
     const supabase = getSupabaseAdmin()
 
-    // 1. Create Company in crm_companies
-    const companyIdCode = `COMP-${Math.floor(100000 + Math.random() * 900000)}`
-    const { data: company, error: compErr } = await supabase
+    // 1. Create or Locate Existing Company in crm_companies (Prevent duplicates)
+    let company: any = null
+    const { data: existingCompany } = await supabase
       .from('crm_companies')
-      .insert({
-        company_id: companyIdCode,
-        name: companyName,
-        legal_name: legalName,
-        company_type: companyType,
-        country,
-        city,
-        email: ownerEmail,
-        status: 'Active',
-        source: companyType === 'demo' ? 'Superadmin Demo Onboarding' : 'Staff Controlled Onboarding'
-      })
-      .select()
-      .single()
+      .select('*')
+      .ilike('name', companyName)
+      .maybeSingle()
 
-    if (compErr || !company) {
-      return { error: `Failed to create company: ${compErr?.message}` }
+    if (existingCompany) {
+      // Reuse existing company & update status/details
+      const { data: updatedComp, error: updateErr } = await supabase
+        .from('crm_companies')
+        .update({
+          legal_name: legalName || existingCompany.legal_name,
+          company_type: companyType,
+          country: country || existingCompany.country,
+          city: city || existingCompany.city,
+          email: ownerEmail || existingCompany.email,
+          status: 'Active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingCompany.id)
+        .select()
+        .single()
+
+      if (updateErr) {
+        return { error: `Failed to update existing company record: ${updateErr.message}` }
+      }
+      company = updatedComp
+    } else {
+      // Insert new company
+      const companyIdCode = `COMP-${Math.floor(100000 + Math.random() * 900000)}`
+      const { data: newComp, error: compErr } = await supabase
+        .from('crm_companies')
+        .insert({
+          company_id: companyIdCode,
+          name: companyName,
+          legal_name: legalName,
+          company_type: companyType,
+          country,
+          city,
+          email: ownerEmail,
+          status: 'Active',
+          source: companyType === 'demo' ? 'Superadmin Demo Onboarding' : 'Staff Controlled Onboarding'
+        })
+        .select()
+        .single()
+
+      if (compErr || !newComp) {
+        return { error: `Failed to create company: ${compErr?.message}` }
+      }
+      company = newComp
     }
 
-    // 2. Assign Product Entitlement
+    // 2. Assign/Upsert Product Entitlement (Prevent duplicate entitlement rows for same company + product)
     let expiresAt: string | null = null
     if (expiresDays && expiresDays > 0) {
       expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000).toISOString()
@@ -82,17 +114,21 @@ export async function onboardCustomerCompanyAction(
 
     const { error: entErr } = await supabase
       .from('customer_product_entitlements')
-      .insert({
-        company_id: company.id,
-        product_slug: productSlug,
-        plan_tier: planTier,
-        max_seats: maxSeats,
-        status: 'active',
-        expires_at: expiresAt
-      })
+      .upsert(
+        {
+          company_id: company.id,
+          product_slug: productSlug,
+          plan_tier: planTier,
+          max_seats: maxSeats,
+          status: 'active',
+          expires_at: expiresAt,
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: 'company_id,product_slug' }
+      )
 
     if (entErr) {
-      return { error: `Failed to create product entitlement: ${entErr.message}` }
+      return { error: `Failed to create/update product entitlement: ${entErr.message}` }
     }
 
     // 3. Create or Link Primary Customer Owner
@@ -210,7 +246,9 @@ export async function onboardCustomerCompanyAction(
     const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lubb-al-mandumah-lam.vercel.app'
     const inviteUrl = `${appBaseUrl}/id/invite/${inviteToken}`
 
+    revalidatePath('/control-panel/modules/ecosystem')
     revalidatePath('/control-panel/modules/ecosystem/companies')
+    revalidatePath('/control-panel/modules/ecosystem/entitlements')
     revalidatePath('/control-panel/modules/leads-clients/companies')
 
     return {
@@ -254,7 +292,9 @@ export async function toggleCompanyStatusAction(companyId: string, currentStatus
       max_seats: 10
     })
 
+    revalidatePath('/control-panel/modules/ecosystem')
     revalidatePath('/control-panel/modules/ecosystem/companies')
+    revalidatePath('/control-panel/modules/ecosystem/entitlements')
     revalidatePath(`/control-panel/modules/leads-clients/companies/${companyId}`)
 
     return { success: true, newStatus: newCompanyStatus }

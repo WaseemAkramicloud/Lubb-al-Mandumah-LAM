@@ -31,15 +31,29 @@ export default async function EcosystemAdminPage() {
 
   return (
     <div>
+      {/* Header + Prominent Onboard Button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)', marginBottom: '0.25rem' }}>
             LAM Ecosystem Administration
           </h1>
           <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)' }}>
-            Central administration plane for customer identity, product entitlements, tenant instances, and SSO apps.
+            Central administration for customer accounts, user identities, product subscriptions, and tenant instances.
           </p>
         </div>
+
+        <Link
+          href="/control-panel/modules/ecosystem/companies/new"
+          className="btn btn-primary"
+          style={{
+            padding: '0.75rem 1.5rem',
+            fontWeight: 600,
+            fontSize: 'var(--text-sm)',
+            boxShadow: '0 4px 14px rgba(201, 168, 76, 0.25)'
+          }}
+        >
+          + Onboard New Customer
+        </Link>
       </div>
 
       {/* Metric Highlights */}
@@ -50,17 +64,17 @@ export default async function EcosystemAdminPage() {
         </div>
 
         <div style={cardStyle}>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Active Entitlements</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Active Subscriptions</div>
           <div style={{ fontSize: '2rem', fontWeight: 700, color: '#2ecc71' }}>{activeEntitlements || 0}</div>
         </div>
 
         <div style={cardStyle}>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Tenant Instances</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Product Workspaces</div>
           <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--lam-white)' }}>{totalInstances || 0}</div>
         </div>
 
         <div style={cardStyle}>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Customer Identities</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Customer Users</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
             <span style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--lam-white)' }}>{totalIdentities || 0}</span>
             {suspendedIdentities ? (
@@ -73,42 +87,47 @@ export default async function EcosystemAdminPage() {
       {/* Navigation Sub-Modules */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         <div className="lam-card">
-          <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-gold)', marginBottom: '0.5rem' }}>Product Entitlements</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-gold)', margin: 0 }}>Customer Accounts</h2>
+            <Link href="/control-panel/modules/ecosystem/companies/new" style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-gold)', textDecoration: 'none', fontWeight: 600 }}>
+              + Onboard New
+            </Link>
+          </div>
           <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)', marginBottom: '1.5rem' }}>
-            Grant, upgrade, or suspend company SaaS subscriptions, plan tiers, and seat limits.
+            Manage client organization records, primary account owners, standard vs. demo account types, and status.
+          </p>
+          <Link href="/control-panel/modules/ecosystem/companies" className="btn btn-primary">
+            Customer Accounts Registry →
+          </Link>
+        </div>
+
+        <div className="lam-card">
+          <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-gold)', marginBottom: '0.5rem' }}>Product Subscriptions & Access</h2>
+          <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)', marginBottom: '1.5rem' }}>
+            View and manage active company product subscriptions, plan tiers, seat allocations, and expiration dates.
           </p>
           <Link href="/control-panel/modules/ecosystem/entitlements" className="btn btn-primary">
-            Manage Entitlements →
+            Manage Subscriptions →
           </Link>
         </div>
 
         <div className="lam-card">
-          <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-gold)', marginBottom: '0.5rem' }}>Tenant Instances Registry</h2>
+          <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-white)', marginBottom: '0.5rem' }}>Product Workspaces / Instances</h2>
           <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)', marginBottom: '1.5rem' }}>
-            Register tenant keys, application environment URLs, and integration health statuses.
+            View provisioned product tenant instances, application environment URLs (e.g. NEXORA), and instance keys.
           </p>
-          <Link href="/control-panel/modules/ecosystem/instances" className="btn btn-primary">
-            Manage Product Instances →
+          <Link href="/control-panel/modules/ecosystem/instances" className="btn" style={{ background: 'var(--lam-surface)', color: 'white', border: '1px solid var(--lam-border)' }}>
+            Product Workspaces →
           </Link>
         </div>
 
         <div className="lam-card">
-          <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-white)', marginBottom: '0.5rem' }}>Customer Identities</h2>
+          <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-white)', marginBottom: '0.5rem' }}>Customer Users</h2>
           <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)', marginBottom: '1.5rem' }}>
-            View customer identity records, company memberships, and suspend/reactivate customer access.
+            View central customer user identities, organization memberships, roles, and access status.
           </p>
-          <Link href="/control-panel/modules/ecosystem/identities" className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
-            Customer Identities →
-          </Link>
-        </div>
-
-        <div className="lam-card">
-          <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-white)', marginBottom: '0.5rem' }}>Customer Accounts Registry</h2>
-          <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)', marginBottom: '1.5rem' }}>
-            Manage client organization records (`LAM-C-XXXXXX`) and relationship owners.
-          </p>
-          <Link href="/control-panel/modules/leads-clients/companies" className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
-            View Companies Registry →
+          <Link href="/control-panel/modules/ecosystem/identities" className="btn" style={{ background: 'var(--lam-surface)', color: 'white', border: '1px solid var(--lam-border)' }}>
+            Customer Users →
           </Link>
         </div>
       </div>
