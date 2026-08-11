@@ -3,12 +3,22 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateLeadStatus, assignLead, updateInternalNotes, convertToClient, deleteLead } from '@/lib/actions/crm'
+import Link from 'next/link'
 
-export function LeadDetailClient({ lead, staffList, auditLogs }: { lead: any, staffList: any[], auditLogs: any[] }) {
+interface LeadDetailProps {
+  lead: any
+  staffList: any[]
+  auditLogs: any[]
+  productName?: string | null
+  companies?: { id: string; name: string }[]
+}
+
+export function LeadDetailClient({ lead, staffList, auditLogs, productName, companies = [] }: LeadDetailProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [notes, setNotes] = useState(lead.internal_notes || '')
+  const [selectedCompanyId, setSelectedCompanyId] = useState('')
 
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     setLoading(true)
@@ -48,7 +58,7 @@ export function LeadDetailClient({ lead, staffList, auditLogs }: { lead: any, st
     
     setLoading(true)
     try {
-      const res = await convertToClient(lead.id)
+      const res = await convertToClient(lead.id, selectedCompanyId || undefined)
       if (res.success) {
         router.push(`/control-panel/modules/leads-clients/clients/${res.clientId}`)
       }
@@ -72,6 +82,9 @@ export function LeadDetailClient({ lead, staffList, auditLogs }: { lead: any, st
       setLoading(false)
     }
   }
+
+  // Resolve product display name: relational name takes priority, fall back to free text
+  const displayProduct = productName || lead.interested_product || '-'
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
@@ -109,9 +122,29 @@ export function LeadDetailClient({ lead, staffList, auditLogs }: { lead: any, st
             </div>
             <div>
               <div style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Interested Product</div>
-              <div style={{ fontSize: 'var(--text-base)' }}>{lead.interested_product || '-'}</div>
+              <div style={{ fontSize: 'var(--text-base)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {displayProduct}
+                {lead.product_slug && (
+                  <span style={{ 
+                    fontFamily: 'monospace', fontSize: 'var(--text-xs)', color: 'var(--lam-gold)', 
+                    background: 'rgba(201, 168, 76, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '3px' 
+                  }}>
+                    {lead.product_slug}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Company Link */}
+          {lead.company_id && (
+            <div style={{ padding: '0.75rem', background: 'rgba(46, 204, 113, 0.05)', borderRadius: '4px', marginBottom: '1rem' }}>
+              <span style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' }}>Linked Company: </span>
+              <Link href={`/control-panel/modules/leads-clients/companies/${lead.company_id}`} style={{ color: 'var(--lam-gold)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>
+                View Company Profile →
+              </Link>
+            </div>
+          )}
 
           <div className="lam-divider" style={{ margin: '1.5rem 0' }} />
           
@@ -183,15 +216,35 @@ export function LeadDetailClient({ lead, staffList, auditLogs }: { lead: any, st
           </div>
 
           {lead.status !== 'Converted' && (
-            <button 
-              onClick={handleConvert} 
-              disabled={loading || !['Qualified', 'Proposal'].includes(lead.status)} 
-              className="btn btn-primary" 
-              style={{ width: '100%', marginBottom: '1rem', opacity: ['Qualified', 'Proposal'].includes(lead.status) ? 1 : 0.5 }}
-              title={!['Qualified', 'Proposal'].includes(lead.status) ? "Status must be Qualified or Proposal to convert" : ""}
-            >
-              Convert to Client
-            </button>
+            <>
+              {/* Link to Existing Company */}
+              {companies.length > 0 && (
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)' }}>Link to Existing Company (optional)</label>
+                  <select 
+                    value={selectedCompanyId} 
+                    onChange={(e) => setSelectedCompanyId(e.target.value)}
+                    className="form-input"
+                    disabled={loading}
+                  >
+                    <option value="">— Create New Company —</option>
+                    {companies.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              <button 
+                onClick={handleConvert} 
+                disabled={loading || !['Qualified', 'Proposal'].includes(lead.status)} 
+                className="btn btn-primary" 
+                style={{ width: '100%', marginBottom: '1rem', opacity: ['Qualified', 'Proposal'].includes(lead.status) ? 1 : 0.5 }}
+                title={!['Qualified', 'Proposal'].includes(lead.status) ? "Status must be Qualified or Proposal to convert" : ""}
+              >
+                Convert to Client
+              </button>
+            </>
           )}
 
           {lead.status === 'Converted' && (

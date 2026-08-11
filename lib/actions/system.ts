@@ -56,3 +56,50 @@ export async function updateSystemSettings(formData: FormData) {
   revalidatePath('/control-panel/modules/system-settings')
   return { success: true }
 }
+
+export async function updateEcosystemSettings(formData: FormData) {
+  await requirePermission('system_settings', 'edit')
+  
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const ecosystemValue = {
+    parent_platform_name: formData.get('eco_parent_platform') || 'LAM',
+    architecture_model: formData.get('eco_architecture_model') || 'Independent Product Applications',
+    product_db_strategy: formData.get('eco_product_db_strategy') || 'Separate project/database per serious SaaS',
+    internal_erp: formData.get('eco_internal_erp') || 'ATOM',
+    lam_central_status: formData.get('eco_lam_central_status') || 'Not Yet Enabled',
+    cross_product_sso_status: formData.get('eco_cross_product_sso') || 'Not Yet Enabled',
+    ecosystem_notes: formData.get('eco_notes') || '',
+  }
+
+  const { error } = await supabase
+    .from('system_settings')
+    .update({
+      setting_value: ecosystemValue,
+      updated_by: user?.id,
+      updated_at: new Date().toISOString()
+    })
+    .eq('setting_key', 'lam_ecosystem')
+
+  if (error) {
+    // If row doesn't exist yet, insert it
+    const { error: insertError } = await supabase
+      .from('system_settings')
+      .insert({
+        setting_key: 'lam_ecosystem',
+        setting_value: ecosystemValue,
+        updated_by: user?.id,
+      })
+    
+    if (insertError) {
+      console.error('Error saving ecosystem settings:', insertError)
+      return { success: false, error: 'Failed to update ecosystem settings.' }
+    }
+  }
+
+  await logAudit('system_settings', 'lam_ecosystem', 'update', { ecosystem: ecosystemValue })
+
+  revalidatePath('/control-panel/modules/system-settings')
+  return { success: true }
+}

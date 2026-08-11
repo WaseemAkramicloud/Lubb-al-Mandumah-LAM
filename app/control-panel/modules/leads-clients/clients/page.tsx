@@ -15,9 +15,12 @@ export default async function ClientsListPage() {
   const { data: clients, error } = await supabase
     .from('crm_clients')
     .select(`
-      id, organization_name, contact_name, email, related_products, created_at,
+      id, organization_name, contact_name, email, related_products, created_at, company_id,
       owner:staff_profiles!crm_clients_relationship_owner_fkey (
         first_name, last_name
+      ),
+      company:crm_companies!crm_clients_company_id_fkey (
+        name, company_id
       )
     `)
     .order('created_at', { ascending: false })
@@ -32,9 +35,14 @@ export default async function ClientsListPage() {
         <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)' }}>
           Clients
         </h1>
-        <Link href="/control-panel/modules/leads-clients" className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
-          ← View Leads
-        </Link>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Link href="/control-panel/modules/leads-clients" className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
+            ← Leads
+          </Link>
+          <Link href="/control-panel/modules/leads-clients/companies" className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
+            Companies
+          </Link>
+        </div>
       </div>
 
       <div className="lam-card" style={{ overflowX: 'auto', padding: 0 }}>
@@ -42,8 +50,8 @@ export default async function ClientsListPage() {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--lam-border)', background: 'rgba(255, 255, 255, 0.02)' }}>
               <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', fontWeight: 600 }}>Organization</th>
+              <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', fontWeight: 600 }}>Company</th>
               <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', fontWeight: 600 }}>Contact Person</th>
-              <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', fontWeight: 600 }}>Related Products</th>
               <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', fontWeight: 600 }}>Relationship Owner</th>
               <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', fontWeight: 600 }}>Converted</th>
               <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', fontWeight: 600, textAlign: 'right' }}>Actions</th>
@@ -59,11 +67,17 @@ export default async function ClientsListPage() {
                     {client.organization_name}
                   </td>
                   <td style={{ padding: '1rem' }}>
+                    {client.company ? (
+                      <Link href={`/control-panel/modules/leads-clients/companies/${client.company_id}`} style={{ color: 'var(--lam-gold)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>
+                        {(client.company as any).name}
+                      </Link>
+                    ) : (
+                      <span style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>Not linked</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '1rem' }}>
                     <div style={{ color: 'var(--lam-silver)', fontSize: 'var(--text-sm)' }}>{client.contact_name}</div>
                     <div style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>{client.email}</div>
-                  </td>
-                  <td style={{ padding: '1rem', color: 'var(--lam-silver-light)', fontSize: 'var(--text-sm)' }}>
-                    {client.related_products && client.related_products.length > 0 ? client.related_products.join(', ') : '-'}
                   </td>
                   <td style={{ padding: '1rem', color: 'var(--lam-silver-light)', fontSize: 'var(--text-sm)' }}>
                     {client.owner ? `${(client.owner as any).first_name} ${(client.owner as any).last_name}` : <span style={{ color: 'var(--lam-silver-dim)' }}>Unassigned</span>}

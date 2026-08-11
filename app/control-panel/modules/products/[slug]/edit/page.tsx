@@ -31,6 +31,17 @@ export default async function EditProductPage({ params }: Props) {
     notFound()
   }
 
+  // Fetch staff list for owner assignment dropdowns
+  const { data: staffList } = await supabase
+    .from('staff_profiles')
+    .select('id, first_name, last_name')
+    .eq('status', 'active')
+    .order('first_name')
+
+  // Check if current user is superadmin (for Product ID editing)
+  const { data: { user } } = await supabase.auth.getUser()
+  const isSuperadmin = user?.user_metadata?.role === 'super_admin'
+
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
@@ -38,7 +49,14 @@ export default async function EditProductPage({ params }: Props) {
           ← Back to Products
         </Link>
       </div>
-      <ProductForm initialData={product} isNew={false} canPublish={canPublish} previewUrl={`/products/${product.slug}?preview=true`} />
+      <ProductForm 
+        initialData={product} 
+        isNew={false} 
+        canPublish={canPublish} 
+        previewUrl={`/products/${product.slug}?preview=true`}
+        staffList={staffList || []}
+        isSuperadmin={isSuperadmin}
+      />
     </div>
   )
 }

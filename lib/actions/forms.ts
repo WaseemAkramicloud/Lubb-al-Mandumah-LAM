@@ -11,6 +11,48 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+/**
+ * Attempt to resolve a free-text product reference to a known product slug.
+ * Returns the slug if found, or null if no match.
+ */
+async function resolveProductSlug(productText: string): Promise<string | null> {
+  if (!productText) return null
+
+  const supabase = getSupabaseAdmin()
+  
+  // Try exact slug match first
+  const { data: bySlug } = await supabase
+    .from('cms_products')
+    .select('slug')
+    .ilike('slug', productText)
+    .limit(1)
+    .single()
+
+  if (bySlug) return bySlug.slug
+
+  // Try name match
+  const { data: byName } = await supabase
+    .from('cms_products')
+    .select('slug')
+    .ilike('name', productText)
+    .limit(1)
+    .single()
+
+  if (byName) return byName.slug
+
+  // Try partial match on slug or name
+  const { data: byPartial } = await supabase
+    .from('cms_products')
+    .select('slug')
+    .or(`slug.ilike.%${productText}%,name.ilike.%${productText}%`)
+    .limit(1)
+    .single()
+
+  if (byPartial) return byPartial.slug
+
+  return null
+}
+
 export async function submitContactRequest(formData: FormData) {
   try {
     const supabase = getSupabaseAdmin();
@@ -43,13 +85,17 @@ export async function submitContactRequest(formData: FormData) {
       return { success: false, error: "Failed to submit request. Please try again later." };
     }
 
-    // Dual-write to CRM Leads
+    // Resolve product slug from enquiry_type text
+    const productSlug = await resolveProductSlug(data.enquiry_type)
+
+    // Dual-write to CRM Leads (with relational product reference)
     await supabase.from("crm_leads").insert({
       source_type: 'contact',
       source_id: insertedRequest.id,
       contact_person: data.name,
       email: data.email,
       interested_product: data.enquiry_type,
+      product_slug: productSlug,
       message: data.message,
       status: 'New'
     });
@@ -97,7 +143,10 @@ export async function submitDemoRequest(formData: FormData) {
       return { success: false, error: "Failed to submit demo request. Please try again later." };
     }
 
-    // Dual-write to CRM Leads
+    // Resolve product slug from product_of_interest text
+    const productSlug = await resolveProductSlug(data.product_of_interest)
+
+    // Dual-write to CRM Leads (with relational product reference)
     await supabase.from("crm_leads").insert({
       source_type: 'demo',
       source_id: insertedDemo.id,
@@ -107,6 +156,7 @@ export async function submitDemoRequest(formData: FormData) {
       phone: data.phone,
       country: data.country,
       interested_product: data.product_of_interest,
+      product_slug: productSlug,
       message: data.requirements,
       status: 'New'
     });

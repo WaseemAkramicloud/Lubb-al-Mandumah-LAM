@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .single()
 
-  const defaultLayout = ['leads', 'my_leads', 'follow_ups', 'users', 'audit', 'content']
+  const defaultLayout = ['products_portfolio', 'leads', 'my_leads', 'follow_ups', 'users', 'audit', 'content']
   const layout = settings?.dashboard_layout || defaultLayout
 
   // Fetch permissions to know which widgets they are allowed to see
@@ -37,10 +37,11 @@ export default async function DashboardPage() {
     if (widgetId === 'users') return !!permissions.user_management
     if (widgetId === 'audit') return !!permissions.audit_log
     if (widgetId === 'content') return !!permissions.site_management
+    if (widgetId === 'products_portfolio') return !!permissions.products
     return false
   })
 
-  // Fetch Widget Data (Service Role used for global counts as standard users might not have row access to count everything if RLS is strict, though standard users should only see this if they have permission)
+  // Fetch Widget Data
   const adminClient = getSupabaseAdmin()
   
   let newRequestsCount = 0
@@ -78,6 +79,30 @@ export default async function DashboardPage() {
     recentLogsCount = count || 0
   }
 
+  // Product Portfolio Counts
+  let totalProducts = 0
+  let activeProducts = 0
+  let devProducts = 0
+  let testProducts = 0
+  let pausedProducts = 0
+
+  if (permittedLayout.includes('products_portfolio')) {
+    const { count: total } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true })
+    totalProducts = total || 0
+
+    const { count: active } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true }).eq('lifecycle_status', 'Active')
+    activeProducts = active || 0
+
+    const { count: dev } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true }).eq('lifecycle_status', 'Development')
+    devProducts = dev || 0
+
+    const { count: test } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true }).in('lifecycle_status', ['Testing', 'Beta'])
+    testProducts = test || 0
+
+    const { count: paused } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true }).eq('lifecycle_status', 'Paused')
+    pausedProducts = paused || 0
+  }
+
   return (
     <div>
       <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)', marginBottom: '2rem' }}>
@@ -86,7 +111,10 @@ export default async function DashboardPage() {
       
       <DashboardGrid 
         layout={permittedLayout} 
-        data={{ newRequestsCount, myAssignedCount, recentUpdatesCount, activeStaffCount, recentLogsCount }} 
+        data={{ 
+          newRequestsCount, myAssignedCount, recentUpdatesCount, activeStaffCount, recentLogsCount,
+          totalProducts, activeProducts, devProducts, testProducts, pausedProducts
+        }} 
       />
     </div>
   )

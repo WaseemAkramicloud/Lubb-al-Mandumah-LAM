@@ -177,6 +177,9 @@ export default function Header() {
 
           {/* ── CTA + Hamburger ── */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
+            <Link href="/id/login" style={{ color: "var(--lam-silver-dim)", textDecoration: "none", fontSize: "var(--text-xs)", padding: "0.3rem 0.6rem" }}>
+              Client Sign In
+            </Link>
             <Link href="/request-demo" className="btn btn-primary btn-sm header-cta">
               Request Demo
             </Link>

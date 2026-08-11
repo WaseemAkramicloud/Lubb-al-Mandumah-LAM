@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth/permissions'
 import Link from 'next/link'
-import { deleteLead } from '@/lib/actions/crm'
 
 export const metadata = {
   title: "Leads | LΛM Control Panel",
@@ -13,14 +12,17 @@ export default async function LeadsListPage() {
   
   const supabase = await createClient()
 
-  // Fetch leads and staff members for assignments
+  // Fetch leads with relational product name and staff assignment
   const { data: leads, error } = await supabase
     .from('crm_leads')
     .select(`
-      id, source_type, contact_person, company, email, interested_product, status, created_at,
+      id, source_type, contact_person, company, email, interested_product, product_slug, status, created_at,
       assigned_to,
       assignee:staff_profiles!crm_leads_assigned_to_fkey (
         first_name, last_name
+      ),
+      product:cms_products!crm_leads_product_slug_fkey (
+        name
       )
     `)
     .order('created_at', { ascending: false })
@@ -47,9 +49,14 @@ export default async function LeadsListPage() {
         <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)' }}>
           Leads
         </h1>
-        <Link href="/control-panel/modules/leads-clients/clients" className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
-          View Clients →
-        </Link>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Link href="/control-panel/modules/leads-clients/companies" className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
+            Companies
+          </Link>
+          <Link href="/control-panel/modules/leads-clients/clients" className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
+            Clients →
+          </Link>
+        </div>
       </div>
 
       <div className="lam-card" style={{ overflowX: 'auto', padding: 0 }}>
@@ -69,6 +76,8 @@ export default async function LeadsListPage() {
             {leads?.map((lead) => {
               const statusStyle = getStatusColor(lead.status)
               const date = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(lead.created_at))
+              // Display product name from relational join, fallback to free text
+              const productDisplay = (lead.product as any)?.name || lead.interested_product || '-'
               
               return (
                 <tr key={lead.id} style={{ borderBottom: '1px solid var(--lam-border)' }}>
@@ -83,7 +92,7 @@ export default async function LeadsListPage() {
                     {lead.source_type}
                   </td>
                   <td style={{ padding: '1rem', color: 'var(--lam-silver-light)', fontSize: 'var(--text-sm)' }}>
-                    {lead.interested_product || '-'}
+                    {productDisplay}
                   </td>
                   <td style={{ padding: '1rem', color: 'var(--lam-silver-light)', fontSize: 'var(--text-sm)' }}>
                     {lead.assignee ? `${(lead.assignee as any).first_name} ${(lead.assignee as any).last_name}` : <span style={{ color: 'var(--lam-silver-dim)' }}>Unassigned</span>}

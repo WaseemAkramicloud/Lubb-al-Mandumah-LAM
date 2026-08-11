@@ -129,3 +129,48 @@ export function ContentWidget() {
     </div>
   )
 }
+
+export function ProductPortfolioWidget({ data }: { data: Record<string, number> }) {
+  const total = data.totalProducts || 0
+  const active = data.activeProducts || 0
+  const development = data.devProducts || 0
+  const testing = data.testProducts || 0
+  const paused = data.pausedProducts || 0
+
+  return (
+    <div className="lam-card" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderColor: 'rgba(201, 168, 76, 0.2)' }}>
+      <h3 style={{ fontSize: 'var(--text-md)', color: 'var(--lam-white)', marginBottom: '0.5rem' }}>Product Portfolio</h3>
+      <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)', marginBottom: '1rem' }}>
+        Internal product registry overview.
+      </p>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', flex: 1 }}>
+        <div style={{ padding: '0.75rem', background: 'var(--lam-surface)', borderRadius: '4px', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--lam-gold)' }}>{total}</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase' }}>Total</div>
+        </div>
+        <div style={{ padding: '0.75rem', background: 'var(--lam-surface)', borderRadius: '4px', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#2ecc71' }}>{active}</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase' }}>Active</div>
+        </div>
+        <div style={{ padding: '0.75rem', background: 'var(--lam-surface)', borderRadius: '4px', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#e67e22' }}>{development}</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase' }}>In Dev</div>
+        </div>
+        <div style={{ padding: '0.75rem', background: 'var(--lam-surface)', borderRadius: '4px', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f1c40f' }}>{testing}</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase' }}>Test/Beta</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {paused > 0 && (
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)' }}>{paused} paused</span>
+        )}
+        <Link href="/control-panel/modules/products" className="btn" style={{ padding: '0.5rem 1rem', background: 'var(--lam-surface)', color: 'var(--lam-silver)', border: '1px solid var(--lam-border)', marginLeft: 'auto' }}>
+          View Products
+        </Link>
+      </div>
+    </div>
+  )
+}

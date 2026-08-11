@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { LeadsWidget, MyLeadsWidget, FollowUpsWidget, UsersWidget, AuditWidget, ContentWidget } from '@/components/dashboard/Widgets'
+import { LeadsWidget, MyLeadsWidget, FollowUpsWidget, UsersWidget, AuditWidget, ContentWidget, ProductPortfolioWidget } from '@/components/dashboard/Widgets'
 import Link from 'next/link'
 
 interface Props {
@@ -96,6 +96,7 @@ export default function DashboardGrid({ layout: initialLayout, data }: Props) {
               {id === 'users' && <UsersWidget data={data} />}
               {id === 'audit' && <AuditWidget data={data} />}
               {id === 'content' && <ContentWidget />}
+              {id === 'products_portfolio' && <ProductPortfolioWidget data={data} />}
             </div>
           )
         })}

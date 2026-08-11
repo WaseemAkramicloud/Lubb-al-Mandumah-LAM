@@ -41,6 +41,23 @@ export default async function LeadDetailPage({ params }: Props) {
     .eq('lead_id', lead.id)
     .order('created_at', { ascending: false })
 
+  // Resolve product name from product_slug if set
+  let productName: string | null = null
+  if (lead.product_slug) {
+    const { data: product } = await supabase
+      .from('cms_products')
+      .select('name')
+      .eq('slug', lead.product_slug)
+      .single()
+    productName = product?.name || null
+  }
+
+  // Fetch companies for the "Link to Existing Company" dropdown
+  const { data: companies } = await supabase
+    .from('crm_companies')
+    .select('id, name')
+    .order('name')
+
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
@@ -52,7 +69,9 @@ export default async function LeadDetailPage({ params }: Props) {
       <LeadDetailClient 
         lead={lead} 
         staffList={staffList || []} 
-        auditLogs={auditLogs || []} 
+        auditLogs={auditLogs || []}
+        productName={productName}
+        companies={companies || []}
       />
     </div>
   )

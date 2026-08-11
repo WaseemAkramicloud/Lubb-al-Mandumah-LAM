@@ -19,6 +19,7 @@ export default function SidebarNav({ permissions, isSuperadmin }: SidebarNavProp
 
   const navItems = [
     { href: '/control-panel/dashboard', label: 'Dashboard', module: null },
+    { href: '/control-panel/modules/ecosystem', label: 'Ecosystem Admin', module: 'leads_clients' as ModuleName },
     { href: '/control-panel/modules/leads-clients', label: 'Leads & Clients', module: 'leads_clients' as ModuleName },
     { href: '/control-panel/modules/site-management', label: 'Site Management', module: 'site_management' as ModuleName },
     { href: '/control-panel/modules/products', label: 'Products', module: 'products' as ModuleName },

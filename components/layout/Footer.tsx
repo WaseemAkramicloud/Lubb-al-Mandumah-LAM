@@ -114,6 +114,20 @@ export default function Footer() {
               </Link>
             ))}
 
+            {/* Client Portal — discreet, footer link */}
+            <Link
+              href="/id/login"
+              style={{
+                fontSize: "var(--text-xs)",
+                color: "var(--lam-silver-dim)",
+                opacity: 0.6,
+                borderLeft: "1px solid var(--lam-border)",
+                paddingLeft: "1.5rem",
+              }}
+            >
+              Client Portal
+            </Link>
+
             {/* Staff Login — discreet, footer only */}
             <Link
               href="/staff-login"

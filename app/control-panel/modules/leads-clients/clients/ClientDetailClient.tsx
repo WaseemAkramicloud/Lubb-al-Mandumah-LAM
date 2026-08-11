@@ -5,7 +5,13 @@ import { useRouter } from 'next/navigation'
 import { updateClientNotes } from '@/lib/actions/crm'
 import Link from 'next/link'
 
-export function ClientDetailClient({ client }: { client: any }) {
+interface ClientDetailProps {
+  client: any
+  company?: any
+  contacts?: any[]
+}
+
+export function ClientDetailClient({ client, company, contacts = [] }: ClientDetailProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -57,6 +63,48 @@ export function ClientDetailClient({ client }: { client: any }) {
               </div>
             </div>
           </div>
+
+          {/* Company Link */}
+          {company && (
+            <>
+              <div className="lam-divider" style={{ margin: '1.5rem 0' }} />
+              <div style={{ padding: '1rem', background: 'rgba(201, 168, 76, 0.05)', borderRadius: '4px', border: '1px solid rgba(201, 168, 76, 0.15)' }}>
+                <div style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Linked Company</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ color: 'var(--lam-white)', fontWeight: 500 }}>{company.name}</div>
+                    {company.company_id && (
+                      <span style={{ fontFamily: 'monospace', fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)' }}>{company.company_id}</span>
+                    )}
+                  </div>
+                  <Link href={`/control-panel/modules/leads-clients/companies/${company.id}`} style={{ color: 'var(--lam-gold)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>
+                    View Company →
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Contacts from Company */}
+          {contacts.length > 0 && (
+            <>
+              <div className="lam-divider" style={{ margin: '1.5rem 0' }} />
+              <div>
+                <div style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Company Contacts ({contacts.length})</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {contacts.map((contact: any) => (
+                    <div key={contact.id} style={{ padding: '0.75rem', background: 'var(--lam-surface)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--lam-white)', fontSize: 'var(--text-sm)' }}>
+                        {contact.first_name} {contact.last_name || ''}
+                        {contact.job_title && <span style={{ color: 'var(--lam-silver-dim)', marginLeft: '0.5rem' }}>— {contact.job_title}</span>}
+                      </span>
+                      <span style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>{contact.email}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
           
           <div className="lam-divider" style={{ margin: '1.5rem 0' }} />
           
