@@ -218,7 +218,7 @@ export async function onboardCustomerCompanyAction(
       .maybeSingle()
 
     if (!instanceCheck) {
-      const nexoraBase = process.env.NEXORA_BASE_URL || 'https://nexora-nu-lime-63.vercel.app'
+      const nexoraBase = process.env.NEXORA_BASE_URL || 'https://nexora.lubbalmandumah.com'
       await supabase.from('customer_product_instances').insert({
         company_id: company.id,
         product_slug: productSlug,
@@ -243,7 +243,7 @@ export async function onboardCustomerCompanyAction(
       status: provisionMode === 'password' ? 'accepted' : 'pending'
     })
 
-    const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lubb-al-mandumah-lam.vercel.app'
+    const appBaseUrl = process.env.LAM_ID_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://id.lubbalmandumah.com'
     const inviteUrl = `${appBaseUrl}/id/invite/${inviteToken}`
 
     revalidatePath('/control-panel/modules/ecosystem')

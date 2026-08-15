@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 
-const ISSUER = process.env.LAM_SSO_ISSUER || process.env.NEXT_PUBLIC_APP_URL || 'https://lam.com'
+const ISSUER = process.env.LAM_SSO_ISSUER || process.env.NEXT_PUBLIC_APP_URL || 'https://id.lubbalmandumah.com'
 const KEY_ID = 'lam-id-key-rs256-2026'
 
 // RSA 2048 Keypair Manager (Private Key for signing, Public Key for verification & JWKS)

@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 const getNexoraProvisioningUrl = () => {
   if (process.env.NEXORA_PROVISIONING_URL) return process.env.NEXORA_PROVISIONING_URL
   if (process.env.NEXORA_BASE_URL) return `${process.env.NEXORA_BASE_URL}/api/inter-service/provisioning`
-  return 'https://nexora-nu-lime-63.vercel.app/api/inter-service/provisioning'
+  return 'https://nexora.lubbalmandumah.com/api/inter-service/provisioning'
 }
 
 const NEXORA_PROVISIONING_URL = getNexoraProvisioningUrl()

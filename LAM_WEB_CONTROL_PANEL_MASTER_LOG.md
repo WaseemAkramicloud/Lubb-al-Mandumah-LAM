@@ -9,11 +9,12 @@
 - **Phase 3 (Future-Proofing Products & CRM Foundations)** is **Completed** (2026-08-11).
 - **Phase 4 (LAM ID, Central Identity, Customer Access & SSO Foundation — Hardened)** is **Completed & Fully Verified** (2026-08-11).
 - **Phase 5 (Deployed Access Correction, Invite-Only Customer Registration, Staff-Controlled Customer & Demo Onboarding)** is **Completed & Verified** (2026-08-11).
-  - Superadmin login failure audited & resolved (password restored in Supabase Auth, existing identity preserved).
-  - Public customer self-registration (`/id/register`) converted to invite-only mode.
-  - Staff Control Panel customer onboarding workflow built (`/control-panel/modules/ecosystem/companies/new`) supporting both Standard and Demo (e.g. Unicore Enterprises) customer onboarding.
-  - Demo company lifecycle controls (inline Suspend/Reactivate toggle and entitlement expiry) added.
-  - Vercel deployed hostnames aligned via environment variables (`NEXT_PUBLIC_APP_URL` and `NEXORA_BASE_URL`) and `sso_applications` redirect URIs updated in Supabase.
+- **Phase 6 (Production Custom Domain Migration to LubbAlMandumah.com, Host Routing & OIDC Issuer Alignment)** is **Completed & Live Verified** (2026-08-15).
+  - All 6 custom subdomains active and responding over HTTPS: `www.lubbalmandumah.com`, `lubbalmandumah.com` (redirects to www), `staff.lubbalmandumah.com`, `id.lubbalmandumah.com`, `account.lubbalmandumah.com`, and `nexora.lubbalmandumah.com`.
+  - Next.js 16 host routing configured in `proxy.ts` separating public website, staff login/control panel, LAM ID OIDC authority, and customer account portal.
+  - Canonical OIDC issuer aligned to `https://id.lubbalmandumah.com`.
+  - Registered canonical NEXORA production callback `https://nexora.lubbalmandumah.com/api/auth/callback` in `sso_applications` Supabase table.
+  - Both LAM and NEXORA production builds and test suites passed cleanly (LAM: 12/12 security tests passed; NEXORA: 20/20 SSO tests passed).
 
 
 
@@ -467,5 +468,38 @@ Before pushing to production, the project owner MUST manually perform these acti
 10. **Known issues & deferred items**: None.
 11. **Exact recommended next step**: Deploy to Vercel and conduct live verification with project owner.
 
+---
 
-
+### Stage 12: Production Custom Domain Migration to LubbAlMandumah.com, Host Routing & OIDC Issuer Alignment (2026-08-15)
+1. **Current stage and status**: Completed & Live Verified.
+2. **What was implemented**:
+   - **Host-Based Routing (`proxy.ts`)**: Integrated Next.js 16 host routing into `proxy.ts`. Enforces domain boundaries: `lubbalmandumah.com` ➔ 301 redirect to `www.lubbalmandumah.com`; `staff.lubbalmandumah.com` ➔ `/staff-login` & `/control-panel`; `id.lubbalmandumah.com` ➔ `/id/*`, `/api/sso/*`, `.well-known/*`; `account.lubbalmandumah.com` ➔ `/portal`. Preserved local development (`localhost:3000`) and Vercel previews.
+   - **OIDC Issuer Alignment**: Updated default fallback issuer across LAM and NEXORA codebases to `https://id.lubbalmandumah.com`. Preserved RS256 RSA private key without regeneration.
+   - **SSO Application Callback Registration**: Executed `update-sso-redirects.ts` script in LAM, registering `https://nexora.lubbalmandumah.com/api/auth/callback` in `sso_applications.redirect_uris` in Supabase.
+   - **NEXORA Production Configuration**: Updated `.env`, `lib/auth/jwks.ts`, `app/api/auth/sso/route.ts`, and `app/api/auth/callback/route.ts` in NEXORA repository (`/Users/waseemakram/My Comp Data/My ERPs/Nexora`).
+3. **User-visible routes added/changed**:
+   - `https://www.lubbalmandumah.com` (Public LAM Website)
+   - `https://lubbalmandumah.com` (Permanent 301 Redirect to www)
+   - `https://staff.lubbalmandumah.com` (LAM Staff Login & Control Panel)
+   - `https://id.lubbalmandumah.com` (LAM ID Authority, OIDC Discovery & JWKS)
+   - `https://account.lubbalmandumah.com` (Customer Account Management Portal)
+   - `https://nexora.lubbalmandumah.com` (Independent NEXORA SaaS Application)
+4. **Important files created/modified**:
+   - **LAM**: `proxy.ts`, `lib/sso/jwt.ts`, `lib/sso/nexora-client.ts`, `lib/actions/customer-onboarding.ts`, `app/.well-known/openid-configuration/route.ts`, `scripts/update-sso-redirects.ts`.
+   - **NEXORA**: `.env`, `lib/auth/jwks.ts`, `app/api/auth/sso/route.ts`, `app/api/auth/callback/route.ts`.
+5. **Database changes**:
+   - Updated `sso_applications` in Supabase (`ykrjmctfmywhymgpkqlu`): Added `https://nexora.lubbalmandumah.com/api/auth/callback` to allowed `redirect_uris`.
+6. **Authentication, roles and permissions**:
+   - Staff authentication remains strictly isolated under `staff.lubbalmandumah.com`.
+   - Customer authentication remains managed via LAM ID (`id.lubbalmandumah.com`) and Customer Account Portal (`account.lubbalmandumah.com`).
+   - Self-registration remains blocked (invite-only token guard preserved).
+7. **Environment variables required**:
+   - **LAM Vercel**: `NEXT_PUBLIC_APP_URL=https://www.lubbalmandumah.com`, `LAM_SSO_ISSUER=https://id.lubbalmandumah.com`, `LAM_ID_BASE_URL=https://id.lubbalmandumah.com`, `LAM_ACCOUNT_BASE_URL=https://account.lubbalmandumah.com`, `LAM_STAFF_BASE_URL=https://staff.lubbalmandumah.com`, `NEXORA_BASE_URL=https://nexora.lubbalmandumah.com`.
+   - **NEXORA Vercel**: `NEXT_PUBLIC_APP_URL=https://nexora.lubbalmandumah.com`, `NEXORA_BASE_URL=https://nexora.lubbalmandumah.com`, `NEXORA_CALLBACK_URL=https://nexora.lubbalmandumah.com/api/auth/callback`, `LAM_OIDC_ISSUER=https://id.lubbalmandumah.com`, `LAM_OIDC_AUTHORIZE_URL=https://id.lubbalmandumah.com/api/sso/authorize`, `LAM_OIDC_TOKEN_URL=https://id.lubbalmandumah.com/api/sso/token`, `LAM_OIDC_JWKS_URL=https://id.lubbalmandumah.com/.well-known/jwks.json`, `LAM_PORTAL_URL=https://account.lubbalmandumah.com`.
+8. **Tests/build checks performed**:
+   - **LAM**: `npm run build` passed cleanly. `npx tsx scripts/test-lam-sso-foundation.ts` passed 12/12 tests (100%).
+   - **NEXORA**: `npm run build` passed cleanly. `npx tsx tests/auth-sso.test.ts` passed 20/20 tests (100%).
+   - **Live Production HTTPS Checks**: `curl -s -L https://id.lubbalmandumah.com/.well-known/openid-configuration` returned valid OIDC discovery JSON with issuer `https://id.lubbalmandumah.com`. Root domain `lubbalmandumah.com` returned 308 redirect to `www.lubbalmandumah.com`.
+9. **Manual steps required from project owner**: None (Vercel domains, Hostinger DNS, and Supabase database settings have been configured).
+10. **Known issues & deferred items**: None.
+11. **Exact recommended next step**: Migration complete. System operational on production custom domains.

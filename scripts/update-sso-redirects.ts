@@ -29,10 +29,10 @@ async function updateSsoRedirects() {
 
   const currentUris = nexoraApp?.redirect_uris || []
   const requiredUris = [
+    'https://nexora.lubbalmandumah.com/api/auth/callback',
     'https://nexora-nu-lime-63.vercel.app/api/auth/callback',
     'http://localhost:3000/api/auth/callback',
-    'http://localhost:3001/api/auth/callback',
-    'https://nexora.lam.com/api/auth/callback'
+    'http://localhost:3001/api/auth/callback'
   ]
 
   const updatedUris = Array.from(new Set([...currentUris, ...requiredUris]))
