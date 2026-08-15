@@ -543,3 +543,44 @@ Before pushing to production, the project owner MUST manually perform these acti
 9. **Manual steps required from project owner**: None.
 10. **Known issues & deferred items**: None.
 11. **Exact recommended next step**: Feature complete and verified live on production.
+
+---
+
+### Stage 14: Control Panel Structure, Client Management & CMS Refinement (2026-08-15)
+1. **Current stage and status**: Completed & Live Verified.
+2. **What was implemented**:
+   - **Navigation Restructuring (`SidebarNav.tsx`)**: Reorganized fragmented sidebar into 4 business-focused groups (`OVERVIEW`: Dashboard; `BUSINESS`: Clients, Products & Subscriptions; `WEBSITE`: Website Management; `ADMINISTRATION`: Staff Users, Audit Log, System Settings, My Profile). Removed "Ecosystem Admin" as a primary name while preserving underlying permissions and functionality.
+   - **Executive Dashboard (`dashboard/page.tsx` & `DashboardGrid.tsx`)**: Refined dashboard with 6 high-level metric cards: Total Clients, Active Subscriptions, Products, New/Pending Requests, Expiring Subscriptions, and Pending Actions.
+   - **Central Clients Hub (`companies/page.tsx`)**: Rebuilt Clients landing page with top business tabs (Existing Clients, Onboard New Client, Client Users, Requests/Leads). Updated primary table action to `Manage →`.
+   - **Client Control Centre & Safe Editing (`companies/[id]`)**: Enhanced central client management profile with Overview, Users & Permissions, Products & Subscriptions, Product Workspace (NEXORA tenant reference), and Activity tabs. Updated `EditCompanyModal.tsx` to enforce **Edit → Review Changes (Current Value → New Value) → Confirm Update**.
+   - **Onboard New Client Flow (`companies/new/OnboardingForm.tsx`)**: Added a **Review New Client Setup** summary step prior to execution with double-click and page refresh guards.
+   - **Ecosystem Subscriptions Hub (`entitlements/EntitlementsClient.tsx`)**: Updated subscriptions view to link client company names directly back to their Client Control Centre (`/control-panel/modules/ecosystem/companies/[id]`).
+   - **Website CMS & Publishing Workflow (`site-management`)**: Visual page section card grid mapped directly to `cms_pages` and `cms_sections`. Section content editor supports **Edit → Preview/Review → Publish to Live Site** workflow.
+3. **User-visible routes added/changed**:
+   - `/control-panel/dashboard` (Executive Dashboard)
+   - `/control-panel/modules/ecosystem/companies` (Clients Hub)
+   - `/control-panel/modules/ecosystem/companies/[id]` (Client Control Centre with Review → Confirm)
+   - `/control-panel/modules/ecosystem/companies/new` (Client Onboarding with Review Step)
+   - `/control-panel/modules/ecosystem/entitlements` (Products & Subscriptions Hub)
+   - `/control-panel/modules/site-management` (Non-Technical Website Management CMS)
+4. **Important files created/modified**:
+   - `components/layout/SidebarNav.tsx` [Grouped Navigation]
+   - `app/control-panel/dashboard/page.tsx` & `DashboardGrid.tsx` [Metric Cards]
+   - `app/control-panel/modules/ecosystem/companies/page.tsx` [Clients Hub & Manage Action]
+   - `app/control-panel/modules/ecosystem/companies/[id]/page.tsx` [Client Control Centre]
+   - `app/control-panel/modules/ecosystem/companies/[id]/EditCompanyModal.tsx` [Review Changes Flow]
+   - `app/control-panel/modules/ecosystem/companies/new/OnboardingForm.tsx` [Review New Client Setup]
+   - `app/control-panel/modules/ecosystem/entitlements/EntitlementsClient.tsx` [Client Subscriptions Links]
+   - `LAM_WEB_CONTROL_PANEL_MASTER_LOG.md` [Master Record Update]
+5. **Database changes**:
+   - No database schema changes introduced. Reused existing `crm_companies`, `customer_company_memberships`, `customer_identities`, `customer_product_entitlements`, `customer_product_instances`, `cms_pages`, `cms_sections`, and `staff_profiles`.
+6. **Authentication, roles and permissions**:
+   - Preserved 100% of staff auth, permissions checks (`canAccess`), LAM ID, OIDC/SSO, RS256/JWKS, and domain/host isolation.
+7. **Environment variables required**: Unchanged.
+8. **Tests/build checks performed**:
+   - `npm run build`: Exit code 0 (Compiled successfully across static and dynamic routes).
+   - `npx tsx scripts/test-lam-sso-foundation.ts`: Passed 12/12 foundation security tests (100%).
+   - `git push origin main`: Pushed commit `b6b9cfd` to `WaseemAkramicloud/Lubb-al-Mandumah-LAM.git`.
+9. **Manual steps required from project owner**: None.
+10. **Known issues & deferred items**: None.
+11. **Exact recommended next step**: Refinement complete. System operational on production domain `https://staff.lubbalmandumah.com`.
