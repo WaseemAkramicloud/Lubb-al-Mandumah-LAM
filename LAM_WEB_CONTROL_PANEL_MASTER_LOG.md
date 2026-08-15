@@ -503,3 +503,43 @@ Before pushing to production, the project owner MUST manually perform these acti
 9. **Manual steps required from project owner**: None (Vercel domains, Hostinger DNS, and Supabase database settings have been configured).
 10. **Known issues & deferred items**: None.
 11. **Exact recommended next step**: Migration complete. System operational on production custom domains.
+
+---
+
+### Stage 13: Customer Accounts CRUD Completion & Details 404 Resolution (2026-08-15)
+1. **Current stage and status**: Completed & Live Verified.
+2. **What was implemented**:
+   - **404 Resolution**: Audited Ecosystem Customer Accounts table (`/control-panel/modules/ecosystem/companies/page.tsx`). Fixed Details button link which previously pointed to an non-existent Ecosystem route. Built dynamic Ecosystem route `/control-panel/modules/ecosystem/companies/[id]`.
+   - **Ecosystem Company Profile (`[id]/page.tsx`)**: Built a complete staff-facing Customer Profile displaying:
+     - Company Overview (Display Name, Legal Name, Customer Type: Standard/Demo badge, Location, Email, Phone, Website, Status, Created/Updated dates, Assigned Account Manager, Internal Notes).
+     - Primary Owner & Account Users (Memberships table with Owner badge, emails, roles, account status, last login timestamps).
+     - Product Subscriptions & Entitlements (Product slug, plan tier, max seats, status, expiration dates).
+     - SaaS Tenant Instances (NEXORA tenant instance key e.g. `tenant_6c75683e`, environment `production`, instance URL `https://nexora.lubbalmandumah.com`, instance status).
+     - Explicit User Product Access Grants (Grants table with user names, emails, product slugs, status, granted dates).
+     - Account Activity Log (Timeline of onboarding, entitlement updates, provisioning, and status changes).
+   - **Company Edit Modal (`EditCompanyModal.tsx`)**: Built client modal and `updateCompanyDetailsAction` server action allowing authorized staff to update display/legal name, customer type, country/city, website, phone, primary email, status (Active/Suspended/Archived), assigned staff, and internal notes without duplicating company records.
+   - **Customer Accounts List Enhancements**: Added prominent gold `+ Onboard New Customer` button linking to `/control-panel/modules/ecosystem/companies/new`. Displayed primary owner details and separate company status vs product entitlement status.
+   - **Customer Identities Interlinking**: Updated `/control-panel/modules/ecosystem/identities` (`IdentitiesClient.tsx`) to link assigned organization names directly to `/control-panel/modules/ecosystem/companies/[id]`.
+3. **User-visible routes added/changed**:
+   - `/control-panel/modules/ecosystem/companies` (Enhanced Customer Accounts Registry)
+   - `/control-panel/modules/ecosystem/companies/[id]` (Ecosystem Company Details Profile & Edit Modal)
+   - `/control-panel/modules/ecosystem/identities` (Linked Organization names to Company Profile)
+4. **Important files created/modified**:
+   - `app/control-panel/modules/ecosystem/companies/[id]/page.tsx` [Company Profile Route]
+   - `app/control-panel/modules/ecosystem/companies/[id]/EditCompanyModal.tsx` [Edit Company Modal Component]
+   - `app/control-panel/modules/ecosystem/companies/page.tsx` [Updated Accounts List]
+   - `app/control-panel/modules/ecosystem/identities/IdentitiesClient.tsx` [Interlinked Organization Links]
+   - `lib/actions/ecosystem-admin.ts` [Added updateCompanyDetailsAction]
+5. **Database changes**:
+   - No schema changes required (reused existing `crm_companies`, `customer_company_memberships`, `customer_identities`, `customer_product_entitlements`, `customer_product_instances`, `customer_product_access`, `customer_audit_logs`).
+6. **Authentication, roles and permissions**:
+   - Governed by `leads_clients` and `user_management` staff permissions. Staff routes remain strictly scoped under `staff.lubbalmandumah.com`.
+7. **Environment variables required**: Unchanged.
+8. **Tests/build checks performed**:
+   - `npm run build`: Exit code 0 (Generated dynamic route `ƒ /control-panel/modules/ecosystem/companies/[id]`).
+   - `npx tsx scripts/test-lam-sso-foundation.ts`: 12/12 foundation security tests passed.
+   - `git push origin main`: Committed and pushed to `WaseemAkramicloud/Lubb-al-Mandumah-LAM.git` (`commit 1021c8d`).
+   - Live HTTPS verification: `curl -s -I https://staff.lubbalmandumah.com/control-panel/modules/ecosystem/companies` returned HTTP 307 redirecting to `/staff-login`. Hostname isolation verified (`www.lubbalmandumah.com` 301 redirects to staff hostname).
+9. **Manual steps required from project owner**: None.
+10. **Known issues & deferred items**: None.
+11. **Exact recommended next step**: Feature complete and verified live on production.
