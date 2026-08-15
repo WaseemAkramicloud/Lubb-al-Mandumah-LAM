@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { toggleCustomerIdentityStatus } from '@/lib/actions/ecosystem-admin'
 
 export function IdentitiesClient({ identities }: { identities: any[] }) {
@@ -60,7 +61,13 @@ export function IdentitiesClient({ identities }: { identities: any[] }) {
                     {cust.email}
                   </td>
                   <td style={{ padding: '1rem' }}>
-                    <div style={{ color: 'var(--lam-white)', fontSize: 'var(--text-sm)' }}>{compName}</div>
+                    {mem?.company?.id ? (
+                      <Link href={`/control-panel/modules/ecosystem/companies/${mem.company.id}`} style={{ color: 'var(--lam-gold)', textDecoration: 'none', fontWeight: 500, fontSize: 'var(--text-sm)' }}>
+                        {compName}
+                      </Link>
+                    ) : (
+                      <div style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)' }}>{compName}</div>
+                    )}
                     {compRole && (
                       <div style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'capitalize' }}>
                         Role: {compRole}

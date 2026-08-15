@@ -13,19 +13,22 @@ export default async function EcosystemCompaniesPage() {
 
   const adminClient = getSupabaseAdmin()
 
-  // Fetch companies with memberships and entitlements
+  // Fetch companies with memberships, identities, and entitlements
   const { data: companies } = await adminClient
     .from('crm_companies')
     .select(`
       id, company_id, name, legal_name, company_type, country, status, created_at,
-      memberships:customer_company_memberships(id),
+      memberships:customer_company_memberships(
+        company_role,
+        identity:customer_identities(first_name, last_name, email)
+      ),
       entitlements:customer_product_entitlements(id, product_slug, status, plan_tier, expires_at)
     `)
     .order('created_at', { ascending: false })
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <Link href="/control-panel/modules/ecosystem" style={{ color: 'var(--lam-gold)', textDecoration: 'none', fontSize: 'var(--text-xs)' }}>
@@ -40,8 +43,8 @@ export default async function EcosystemCompaniesPage() {
           </p>
         </div>
 
-        <Link href="/control-panel/modules/ecosystem/companies/new" className="btn btn-primary" style={{ padding: '0.6rem 1.25rem' }}>
-          + Onboard Customer Account
+        <Link href="/control-panel/modules/ecosystem/companies/new" className="btn btn-primary" style={{ padding: '0.65rem 1.35rem', fontWeight: 600 }}>
+          + Onboard New Customer
         </Link>
       </div>
 
@@ -52,9 +55,9 @@ export default async function EcosystemCompaniesPage() {
               <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Company ID</th>
               <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Company Name</th>
               <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Type</th>
-              <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Members</th>
+              <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Primary Owner</th>
               <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Entitlements</th>
-              <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Status</th>
+              <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Account Status</th>
               <th style={{ textAlign: 'right', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Actions</th>
             </tr>
           </thead>
@@ -64,13 +67,18 @@ export default async function EcosystemCompaniesPage() {
                 const isDemo = comp.company_type === 'demo'
                 const isSuspended = comp.status === 'Suspended' || comp.status === 'Inactive'
 
+                const ownerMem = comp.memberships?.find((m: any) => m.company_role === 'owner') || comp.memberships?.[0]
+                const ownerUser = (ownerMem?.identity as any)
+
                 return (
                   <tr key={comp.id} style={{ borderBottom: '1px solid var(--lam-border)' }}>
                     <td style={{ padding: '0.85rem 1.25rem', fontFamily: 'monospace', color: 'var(--lam-gold)' }}>
                       {comp.company_id || comp.id.slice(0, 8)}
                     </td>
                     <td style={{ padding: '0.85rem 1.25rem', color: 'var(--lam-white)', fontWeight: 600 }}>
-                      {comp.name}
+                      <Link href={`/control-panel/modules/ecosystem/companies/${comp.id}`} style={{ color: 'var(--lam-white)', textDecoration: 'none' }}>
+                        {comp.name}
+                      </Link>
                       {comp.legal_name && comp.legal_name !== comp.name ? (
                         <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', fontWeight: 400 }}>{comp.legal_name}</div>
                       ) : null}
@@ -80,8 +88,17 @@ export default async function EcosystemCompaniesPage() {
                         {isDemo ? 'DEMO' : 'STANDARD'}
                       </span>
                     </td>
-                    <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center', color: 'var(--lam-white)' }}>
-                      {comp.memberships ? comp.memberships.length : 0}
+                    <td style={{ padding: '0.85rem 1.25rem' }}>
+                      {ownerUser ? (
+                        <div>
+                          <div style={{ color: 'var(--lam-white)', fontWeight: 500, fontSize: 'var(--text-xs)' }}>
+                            {ownerUser.first_name} {ownerUser.last_name || ''}
+                          </div>
+                          <div style={{ color: 'var(--lam-silver-dim)', fontSize: '9px' }}>{ownerUser.email}</div>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>Unassigned</span>
+                      )}
                     </td>
                     <td style={{ padding: '0.85rem 1.25rem', textAlign: 'center' }}>
                       {comp.entitlements && comp.entitlements.length > 0 ? (
@@ -108,6 +125,10 @@ export default async function EcosystemCompaniesPage() {
                     </td>
                     <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <Link href={`/control-panel/modules/ecosystem/companies/${comp.id}`} className="btn btn-primary" style={{ padding: '0.25rem 0.6rem', fontSize: 'var(--text-xs)' }}>
+                          Details
+                        </Link>
+
                         <form action={async () => {
                           'use server'
                           await toggleCompanyStatusAction(comp.id, comp.status)
@@ -126,9 +147,6 @@ export default async function EcosystemCompaniesPage() {
                             {isSuspended ? 'Reactivate' : 'Suspend'}
                           </button>
                         </form>
-                        <Link href={`/control-panel/modules/leads-clients/companies/${comp.id}`} className="btn" style={{ padding: '0.25rem 0.5rem', fontSize: 'var(--text-xs)' }}>
-                          Details
-                        </Link>
                       </div>
                     </td>
                   </tr>

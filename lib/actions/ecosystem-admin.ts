@@ -139,3 +139,62 @@ export async function toggleCustomerIdentityStatus(customerId: string, newStatus
   revalidatePath('/control-panel/modules/ecosystem/identities')
   return { success: true }
 }
+
+/**
+ * Update Customer Company details (Staff Control Panel action).
+ * Preserves stable UUID PK and company_id string. Does NOT create duplicate company records.
+ */
+export async function updateCompanyDetailsAction(formData: FormData) {
+  await requirePermission('leads_clients', 'edit')
+
+  const id = formData.get('id') as string
+  const name = (formData.get('name') as string)?.trim()
+  const legalName = (formData.get('legal_name') as string)?.trim() || null
+  const companyType = (formData.get('company_type') as string)?.trim() || 'standard'
+  const country = (formData.get('country') as string)?.trim() || null
+  const city = (formData.get('city') as string)?.trim() || null
+  const website = (formData.get('website') as string)?.trim() || null
+  const email = (formData.get('email') as string)?.trim().toLowerCase() || null
+  const phone = (formData.get('phone') as string)?.trim() || null
+  const status = (formData.get('status') as string)?.trim() || 'Active'
+  const notes = (formData.get('notes') as string)?.trim() || null
+  const assignedStaff = (formData.get('assigned_staff') as string)?.trim() || null
+
+  if (!id || !name) {
+    throw new Error('Company ID and Name are required.')
+  }
+
+  const adminClient = getSupabaseAdmin()
+
+  const payload = {
+    name,
+    legal_name: legalName,
+    company_type: companyType,
+    country,
+    city,
+    website,
+    email,
+    phone,
+    status,
+    notes,
+    assigned_staff: assignedStaff,
+    updated_at: new Date().toISOString()
+  }
+
+  const { error } = await adminClient
+    .from('crm_companies')
+    .update(payload)
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+
+  await logAudit('crm_company', id, 'company_updated', payload)
+
+  revalidatePath('/control-panel/modules/ecosystem/companies')
+  revalidatePath(`/control-panel/modules/ecosystem/companies/${id}`)
+  revalidatePath('/control-panel/modules/leads-clients/companies')
+  revalidatePath(`/control-panel/modules/leads-clients/companies/${id}`)
+
+  return { success: true }
+}
+
