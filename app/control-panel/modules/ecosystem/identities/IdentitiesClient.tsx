@@ -140,7 +140,7 @@ export function IdentitiesClient({ identities }: { identities: any[] }) {
       )}
 
       {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--lam-border)', pb: '0.75rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
         {[
           { key: 'all', label: 'All Users', count: counts.all },
           { key: 'active', label: 'Active Users', count: counts.active },
