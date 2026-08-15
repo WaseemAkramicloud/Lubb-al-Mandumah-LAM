@@ -474,3 +474,18 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
     2. **Purembil Fresh Onboarding (NEW Identity)**: Verified atomic creation of `Ayesha Siddiqua` (`ayesha@purembil.com`), temporary password login, forced password update, and clearance of `must_change_password` flag.
     3. **Purembil (Existing Identity)**: Verified adding existing identity to a second company (`Purembil Logistics`) while preserving existing login credentials untouched.
   - **Build Verification**: `npm run build` passed cleanly across 61 routes with 0 errors.
+
+---
+
+### Stage 17: Client Lifecycle Action Controls & List View Status Filters (2026-08-15)
+- **Status**: Completed & Verified.
+- **What was implemented**:
+  - **Client Action Controls (`ClientLifecycleActions.tsx`)**: Prominent action card on Client Detail page rendering `Suspend Client` / `Reactivate Client`, `Archive Client`, and red danger `Delete Client` button.
+  - **Suspend & Reactivate**: `suspendClientAction` & `reactivateClientAction` set company status to `Suspended` / `Active`, update entitlement & access statuses, and send deprovisioning notice to NEXORA while preserving all records.
+  - **Archive**: `archiveClientAction` sets company status to `Archived`, removes normal customer access, and moves client to Archived view.
+  - **Delete Modal & Verification**: Superadmin-only danger modal requiring administrator to type exact Company Name or Company Code before enabling `Permanently Delete`. Includes summary of Owner, Products, Users, and Tenants.
+  - **Shared Identity Preservation**: `Also delete orphaned LAM ID` checkbox defaults to **OFF**. If primary owner or member belongs to another organization, shared Auth identity & customer record are preserved.
+  - **NEXORA Inter-Service Deprovisioning**: Extended `notifyNexoraProvisioning` in `lib/sso/nexora-client.ts` to support `action: 'archive'` and `'delete'`.
+  - **List View Status Filters**: Added status filter bar (`Active Clients | Suspended | Archived | All Clients`) to `/control-panel/clients`.
+  - **Audit Logging**: Recorded events in `customer_audit_logs` (`client_suspended`, `client_reactivated`, `client_archived`, `permanent_deletion_initiated`, `permanent_deletion_completed`, `orphaned_identity_deleted`, `external_saas_deprovisioned`).
+  - **Verification**: Tested lifecycle suite on synthetic test client via `scripts/test-client-lifecycle.ts`. `npm run build` compiled cleanly with 0 errors.

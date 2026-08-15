@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { toggleCompanyStatusAction } from '@/lib/actions/customer-onboarding'
 import { EditCompanyModal } from './EditCompanyModal'
 import AdminOwnerActions from './AdminOwnerActions'
+import ClientLifecycleActions from './ClientLifecycleActions'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -101,6 +102,9 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
     .select('id, first_name, last_name, staff_id')
     .order('first_name', { ascending: true })
 
+  const ownerMem = (memberships || []).find((m: any) => m.company_role === 'owner')
+  const ownerIdentity = ownerMem ? (ownerMem.identity as any) : null
+
   const isDemo = company.company_type === 'demo'
   const isSuspended = company.status === 'Suspended' || company.status === 'Inactive'
 
@@ -164,6 +168,21 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
         {/* Left Column */}
         <div>
+          {/* Client Lifecycle Actions Card */}
+          <ClientLifecycleActions
+            company={{
+              id: company.id,
+              name: company.name,
+              company_id: company.company_id,
+              status: company.status
+            }}
+            primaryOwnerName={ownerIdentity ? `${ownerIdentity.first_name || ''} ${ownerIdentity.last_name || ''}`.trim() : 'Not set'}
+            primaryOwnerEmail={ownerIdentity?.email || company.email || 'Not set'}
+            subscribedProducts={(entitlements || []).map((e: any) => e.product_slug)}
+            userCount={memberships?.length || 1}
+            tenantCount={instances?.length || 1}
+          />
+
           {/* 1. Company Overview Card */}
           <div className="lam-card" style={{ marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-gold)', marginBottom: '1.25rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>

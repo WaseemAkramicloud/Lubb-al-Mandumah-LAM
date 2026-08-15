@@ -10,7 +10,7 @@ const getNexoraProvisioningUrl = () => {
 const NEXORA_PROVISIONING_URL = getNexoraProvisioningUrl()
 
 export interface NexoraProvisioningPayload {
-  action: 'activate' | 'suspend' | 'update_entitlement'
+  action: 'activate' | 'suspend' | 'update_entitlement' | 'archive' | 'delete'
   company_id: string
   company_name: string
   product_slug: string
@@ -65,7 +65,7 @@ export async function notifyNexoraProvisioning(
             product_slug: payload.product_slug,
             instance_key: resData.instance_key,
             instance_url: resData.instance_url,
-            status: payload.action === 'suspend' ? 'suspended' : 'active',
+            status: payload.action === 'suspend' ? 'suspended' : payload.action === 'archive' ? 'archived' : payload.action === 'delete' ? 'deleted' : 'active',
             updated_at: new Date().toISOString()
           },
           { onConflict: 'company_id,product_slug,instance_key' }

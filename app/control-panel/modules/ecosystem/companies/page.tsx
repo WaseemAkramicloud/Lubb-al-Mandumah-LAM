@@ -8,13 +8,20 @@ export const metadata = {
   robots: { index: false, follow: false },
 }
 
-export default async function EcosystemCompaniesPage() {
+type Props = {
+  searchParams?: Promise<{ status?: string }>
+}
+
+export default async function EcosystemCompaniesPage({ searchParams }: Props) {
   await requirePermission('leads_clients', 'view')
+
+  const resolvedParams = searchParams ? await searchParams : {}
+  const statusFilter = (resolvedParams.status || 'active').toLowerCase()
 
   const adminClient = getSupabaseAdmin()
 
-  // Fetch companies with memberships, identities, and entitlements
-  const { data: companies } = await adminClient
+  // Build query
+  let query = adminClient
     .from('crm_companies')
     .select(`
       id, company_id, name, legal_name, company_type, country, status, created_at,
@@ -25,6 +32,17 @@ export default async function EcosystemCompaniesPage() {
       entitlements:customer_product_entitlements(id, product_slug, status, plan_tier, expires_at)
     `)
     .order('created_at', { ascending: false })
+
+  if (statusFilter === 'active') {
+    query = query.or('status.eq.Active,status.eq.active,status.is.null')
+  } else if (statusFilter === 'suspended') {
+    query = query.or('status.eq.Suspended,status.eq.suspended,status.eq.Inactive')
+  } else if (statusFilter === 'archived') {
+    query = query.or('status.eq.Archived,status.eq.archived')
+  }
+
+  const { data: rawCompanies } = await query
+  const companies = (rawCompanies || []).filter(c => c.status !== 'Deleted' && c.status !== 'deleted')
 
   return (
     <div>
@@ -44,7 +62,7 @@ export default async function EcosystemCompaniesPage() {
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
         <span style={{ padding: '0.5rem 1rem', background: 'rgba(201, 168, 76, 0.15)', color: 'var(--lam-gold)', borderRadius: '4px', fontSize: 'var(--text-xs)', fontWeight: 600, border: '1px solid rgba(201, 168, 76, 0.3)' }}>
           🏢 Existing Clients ({companies?.length || 0})
         </span>
@@ -57,6 +75,37 @@ export default async function EcosystemCompaniesPage() {
         <Link href="/control-panel/clients/requests" style={{ padding: '0.5rem 1rem', background: 'var(--lam-surface)', color: 'var(--lam-silver)', borderRadius: '4px', fontSize: 'var(--text-xs)', textDecoration: 'none', border: '1px solid var(--lam-border)' }}>
           📩 Business Requests / Leads
         </Link>
+      </div>
+
+      {/* Status Filter Bar */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', alignItems: 'center' }}>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', marginRight: '0.5rem' }}>Filter Status:</span>
+        {[
+          { label: 'Active Clients', val: 'active' },
+          { label: 'Suspended', val: 'suspended' },
+          { label: 'Archived', val: 'archived' },
+          { label: 'All Clients', val: 'all' },
+        ].map(tab => {
+          const isActive = statusFilter === tab.val
+          return (
+            <Link
+              key={tab.val}
+              href={`/control-panel/clients?status=${tab.val}`}
+              style={{
+                padding: '0.35rem 0.85rem',
+                fontSize: '11px',
+                borderRadius: '4px',
+                textDecoration: 'none',
+                background: isActive ? 'var(--lam-gold)' : 'var(--lam-surface)',
+                color: isActive ? 'var(--lam-black)' : 'var(--lam-silver)',
+                fontWeight: isActive ? 600 : 400,
+                border: `1px solid ${isActive ? 'var(--lam-gold)' : 'var(--lam-border)'}`
+              }}
+            >
+              {tab.label}
+            </Link>
+          )
+        })}
       </div>
 
       <div className="lam-card" style={{ padding: 0, overflow: 'hidden' }}>
