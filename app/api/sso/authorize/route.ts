@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state') || ''
   const codeChallenge = searchParams.get('code_challenge') || ''
   const codeChallengeMethod = searchParams.get('code_challenge_method') || ''
+  const nonce = searchParams.get('nonce') || ''
 
   if (!clientId || !redirectUri) {
     return NextResponse.json({ error: 'invalid_request', error_description: 'Missing client_id or redirect_uri' }, { status: 400 })
@@ -67,7 +68,8 @@ export async function GET(request: NextRequest) {
     accessCheck.company?.id,
     'openid profile email',
     codeChallenge,
-    codeChallengeMethod
+    codeChallengeMethod,
+    nonce
   )
 
   await logCustomerAudit(customer.id, accessCheck.company?.id, 'sso_authorize_granted', {

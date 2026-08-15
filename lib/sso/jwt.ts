@@ -33,6 +33,7 @@ export interface SsoTokenPayload {
   products: string[] // Array of explicitly granted product slugs
   is_nexora_platform_admin?: boolean
   scope?: string
+  nonce?: string
   exp?: number
   iat?: number
   jti?: string

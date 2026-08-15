@@ -88,17 +88,25 @@ export async function POST(request: NextRequest) {
       .eq('status', 'active')
       .maybeSingle()
 
+    // Extract nonce from dedicated authCode.nonce property or challenge metadata
+    let nonceVal: string | undefined = (authCode as any).nonce
+    if (!nonceVal && authCode.code_challenge && authCode.code_challenge.includes(';nonce=')) {
+      const parts = authCode.code_challenge.split(';nonce=')
+      nonceVal = parts[1]
+    }
+
     // 4. Issue Signed OIDC JWT ID Token & Access Token
     const tokenPayload = {
       sub: customer.id,
       aud: client_id,
       email: customer.email,
-      given_name: customer.first_name,
-      family_name: customer.last_name,
+      given_name: customer.first_name || 'User',
+      family_name: customer.last_name || null,
       company_id: authCode.company_id,
       company_role: companyRole,
       products: grantedProducts,
       is_nexora_platform_admin: !!adminGrant,
+      nonce: nonceVal || undefined,
       exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour token
     }
 

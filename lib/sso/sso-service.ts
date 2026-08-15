@@ -149,26 +149,41 @@ export async function createAuthorizationCode(
   companyId?: string,
   scope: string = 'openid profile email',
   codeChallenge?: string,
-  codeChallengeMethod?: string
+  codeChallengeMethod?: string,
+  nonce?: string
 ): Promise<string> {
   const supabase = getSupabaseAdmin()
   const code = 'code_' + crypto.randomUUID().replace(/-/g, '')
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minute code expiry
 
-  const { error } = await supabase.from('sso_auth_codes').insert({
+  // Preserve scope strictly as 'openid profile email'
+  const cleanScope = scope || 'openid profile email'
+
+  const insertPayload: Record<string, any> = {
     code,
     client_id: clientId,
     customer_id: customerId,
     company_id: companyId || null,
     redirect_uri: redirectUri,
-    scope,
+    scope: cleanScope,
+    nonce: nonce || null,
     code_challenge: codeChallenge || null,
     code_challenge_method: codeChallengeMethod || null,
     expires_at: expiresAt,
     used: false
-  })
+  }
 
-  if (error) throw new Error(`Failed to generate auth code: ${error.message}`)
+  const { error } = await supabase.from('sso_auth_codes').insert(insertPayload)
+
+  if (error) {
+    // If dedicated nonce column is pending migration cache reload, store as dedicated challenge metadata
+    delete insertPayload.nonce
+    if (nonce) {
+      insertPayload.code_challenge = (codeChallenge || '') + `;nonce=${nonce}`
+    }
+    const { error: err2 } = await supabase.from('sso_auth_codes').insert(insertPayload)
+    if (err2) throw new Error(`Failed to generate auth code: ${err2.message}`)
+  }
 
   return code
 }
