@@ -17,13 +17,25 @@ export async function proxy(request: NextRequest) {
     return await updateSession(request)
   }
 
-  // Local development / Vercel preview environments: bypass host enforcement
+  // Local development bypass
   if (
     host.includes('localhost') ||
-    host.includes('127.0.0.1') ||
-    host.endsWith('.vercel.app')
+    host.includes('127.0.0.1')
   ) {
     return await updateSession(request)
+  }
+
+  // 0. Vercel Alias Domain: Enforce canonical production subdomains
+  if (host.endsWith('.vercel.app')) {
+    if (pathname.startsWith('/id/') || pathname === '/id') {
+      return NextResponse.redirect(`https://id.lubbalmandumah.com${pathname}${search}`, 307)
+    }
+    if (pathname.startsWith('/control-panel') || pathname.startsWith('/staff-login')) {
+      return NextResponse.redirect(`https://staff.lubbalmandumah.com${pathname}${search}`, 307)
+    }
+    if (pathname.startsWith('/portal')) {
+      return NextResponse.redirect(`https://account.lubbalmandumah.com${pathname}${search}`, 307)
+    }
   }
 
   // 1. Apex Domain Redirect: lubbalmandumah.com -> www.lubbalmandumah.com

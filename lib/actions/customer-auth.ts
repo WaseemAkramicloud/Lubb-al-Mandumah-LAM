@@ -18,10 +18,11 @@ export async function customerLogin(formData: FormData) {
     return { success: false, error: 'Email and password are required.' }
   }
 
-  const supabase = getSupabaseAdmin()
+  const authClient = getSupabaseAdmin()
+  const adminClient = getSupabaseAdmin()
 
   // 1. Verify credentials against canonical Supabase Auth (auth.users)
-  const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+  const { data: authData, error: authErr } = await authClient.auth.signInWithPassword({
     email,
     password
   })
@@ -29,34 +30,43 @@ export async function customerLogin(formData: FormData) {
   let authUserId = authData?.user?.id
 
   if (authErr || !authUserId) {
-    const { data: custAttempt } = await supabase
+    const { data: custAttempt } = await adminClient
       .from('customer_identities')
       .select('id')
       .ilike('email', email)
       .maybeSingle()
 
-    await logCustomerAudit(custAttempt?.id || null, null, 'login_failed_password', { email })
+    await logCustomerAudit(custAttempt?.id || null, null, 'login_failed_password', { email, authError: authErr?.message })
     return { success: false, error: 'Invalid customer email or password.' }
   }
 
-  // 2. Fetch linked customer identity profile (robust lookup)
-  let { data: customer, error: profileErr } = await supabase
+  // 2. Fetch linked customer identity profile (robust lookup with administrative service_role)
+  let { data: customer, error: profileErr } = await adminClient
     .from('customer_identities')
     .select('*')
     .eq('auth_user_id', authUserId)
     .maybeSingle()
 
   if (!customer) {
-    const { data: custByEmail } = await supabase
+    const { data: custByEmail, error: emailErr } = await adminClient
       .from('customer_identities')
       .select('*')
       .ilike('email', email)
       .maybeSingle()
 
     customer = custByEmail
+    if (emailErr) profileErr = emailErr
   }
 
-  if (profileErr || !customer) {
+  if (profileErr) {
+    console.error(`[LAM ID LOGIN DIAGNOSTIC] Profile query DB error for ${email} (auth_user_id: ${authUserId}):`, profileErr)
+    await logCustomerAudit(null, null, 'login_failed_db_error', { email, authUserId, errorCode: profileErr.code, errorMessage: profileErr.message })
+    return { success: false, error: 'Customer profile not found.' }
+  }
+
+  if (!customer) {
+    console.error(`[LAM ID LOGIN DIAGNOSTIC] Customer profile missing for ${email} (auth_user_id: ${authUserId})`)
+    await logCustomerAudit(null, null, 'login_failed_profile_missing', { email, authUserId })
     return { success: false, error: 'Customer profile not found.' }
   }
 
@@ -67,7 +77,7 @@ export async function customerLogin(formData: FormData) {
 
   // Auto-stitch auth_user_id if unlinked
   if (!customer.auth_user_id) {
-    await supabase.from('customer_identities').update({ auth_user_id: authUserId }).eq('id', customer.id)
+    await adminClient.from('customer_identities').update({ auth_user_id: authUserId }).eq('id', customer.id)
   }
 
   // Check mandatory first-login password change requirement
@@ -96,14 +106,14 @@ export async function customerLogin(formData: FormData) {
   const sessionToken = 'csess_' + crypto.randomUUID().replace(/-/g, '')
   const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString()
 
-  await supabase.from('customer_sessions').insert({
+  await adminClient.from('customer_sessions').insert({
     customer_id: customer.id,
     session_token: sessionToken,
     expires_at: expiresAt,
     is_active: true
   })
 
-  await supabase
+  await adminClient
     .from('customer_identities')
     .update({ last_login_at: new Date().toISOString() })
     .eq('id', customer.id)
