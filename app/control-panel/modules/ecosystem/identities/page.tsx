@@ -34,14 +34,14 @@ export default async function CustomerIdentitiesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)', marginBottom: '0.25rem' }}>
-            Customer Identity Administration
+            Client Users Directory
           </h1>
           <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)' }}>
-            Central customer directory, company memberships, and identity security controls (suspend/reactivate).
+            Central directory of client account users, company memberships, and access controls.
           </p>
         </div>
-        <Link href="/control-panel/modules/ecosystem" style={{ color: 'var(--lam-silver-dim)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>
-          ← Back to Ecosystem Admin
+        <Link href="/control-panel/clients" style={{ color: 'var(--lam-silver-dim)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>
+          ← Back to Clients
         </Link>
       </div>
 

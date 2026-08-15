@@ -27,8 +27,8 @@ export default function SidebarNav({ permissions, isSuperadmin }: SidebarNavProp
     {
       group: 'BUSINESS',
       items: [
-        { href: '/control-panel/modules/ecosystem/companies', label: 'Clients', module: 'leads_clients' as ModuleName },
-        { href: '/control-panel/modules/ecosystem/entitlements', label: 'Products & Subscriptions', module: 'leads_clients' as ModuleName },
+        { href: '/control-panel/clients', label: 'Clients', module: 'leads_clients' as ModuleName },
+        { href: '/control-panel/subscriptions', label: 'Products & Subscriptions', module: 'leads_clients' as ModuleName },
       ]
     },
     {

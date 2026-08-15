@@ -26,7 +26,7 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
     .from('crm_companies')
     .select(`
       *,
-      assigned:staff_profiles!crm_companies_assigned_staff_fkey (id, first_name, last_name, email, staff_id)
+      assigned:staff_profiles!crm_companies_assigned_staff_fkey (id, first_name, last_name, staff_id)
     `)
     .eq('id', targetId)
     .maybeSingle()
@@ -36,7 +36,7 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
       .from('crm_companies')
       .select(`
         *,
-        assigned:staff_profiles!crm_companies_assigned_staff_fkey (id, first_name, last_name, email, staff_id)
+        assigned:staff_profiles!crm_companies_assigned_staff_fkey (id, first_name, last_name, staff_id)
       `)
       .eq('company_id', targetId)
       .maybeSingle()
@@ -97,7 +97,7 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
   // 7. Fetch Staff Profiles for Staff Assignment in Edit Modal
   const { data: staffProfiles } = await adminClient
     .from('staff_profiles')
-    .select('id, first_name, last_name, email, staff_id')
+    .select('id, first_name, last_name, staff_id')
     .order('first_name', { ascending: true })
 
   const isDemo = company.company_type === 'demo'
@@ -111,7 +111,7 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
     <div>
       {/* Top Header & Navigation */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <Link href="/control-panel/modules/ecosystem/companies" style={{ color: 'var(--lam-gold)', textDecoration: 'none', fontSize: 'var(--text-xs)' }}>
+        <Link href="/control-panel/clients" style={{ color: 'var(--lam-gold)', textDecoration: 'none', fontSize: 'var(--text-xs)' }}>
           ← Back to Clients
         </Link>
       </div>

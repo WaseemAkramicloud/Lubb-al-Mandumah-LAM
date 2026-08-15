@@ -40,14 +40,14 @@ export default async function EntitlementsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)', marginBottom: '0.25rem' }}>
-            Product Access & Entitlements Manager
+            Products & Subscriptions Manager
           </h1>
           <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)' }}>
-            Grant, upgrade, or suspend company product subscriptions and seat allocations.
+            Assign, upgrade, or suspend client product subscriptions and seat allowances across the ecosystem.
           </p>
         </div>
-        <Link href="/control-panel/modules/ecosystem" style={{ color: 'var(--lam-silver-dim)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>
-          ← Back to Ecosystem Admin
+        <Link href="/control-panel/clients" style={{ color: 'var(--lam-silver-dim)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>
+          ← Back to Clients
         </Link>
       </div>
 

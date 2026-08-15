@@ -47,14 +47,11 @@ export default async function LeadsListPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)' }}>
-          Leads
+          Business Requests & Inquiries
         </h1>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <Link href="/control-panel/modules/leads-clients/companies" className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
-            Companies
-          </Link>
-          <Link href="/control-panel/modules/leads-clients/clients" className="btn" style={{ background: 'var(--lam-gunmetal)', color: 'white', border: '1px solid var(--lam-border)' }}>
-            Clients →
+          <Link href="/control-panel/clients" className="btn btn-primary" style={{ padding: '0.5rem 1rem' }}>
+            ← Back to Clients Hub
           </Link>
         </div>
       </div>

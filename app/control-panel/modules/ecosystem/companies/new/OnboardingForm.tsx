@@ -4,9 +4,20 @@ import { useActionState, useState } from 'react'
 import { onboardCustomerCompanyAction, OnboardingActionState } from '@/lib/actions/customer-onboarding'
 import Link from 'next/link'
 
+interface ProductItem {
+  slug: string
+  name: string
+  product_id?: string
+  restricted?: boolean
+}
+
+interface Props {
+  products?: ProductItem[]
+}
+
 const initialState: OnboardingActionState = {}
 
-export default function OnboardingForm() {
+export default function OnboardingForm({ products = [] }: Props) {
   const [state, formAction, isPending] = useActionState(onboardCustomerCompanyAction, initialState)
   const [companyType, setCompanyType] = useState<'standard' | 'demo'>('standard')
   const [provisionMode, setProvisionMode] = useState<'invite' | 'password'>('invite')
@@ -114,7 +125,7 @@ export default function OnboardingForm() {
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <Link href="/control-panel/modules/ecosystem/companies" className="btn btn-primary">
+            <Link href="/control-panel/clients" className="btn btn-primary">
               View All Clients
             </Link>
             <button
@@ -311,9 +322,19 @@ export default function OnboardingForm() {
               <div className="lam-form-group">
                 <label className="lam-label">Target Application</label>
                 <select name="product_slug" value={formData.product_slug} onChange={handleInputChange} className="lam-input" style={{ background: 'var(--lam-surface)', color: 'white' }}>
-                  <option value="nexora">NEXORA — Next-Gen Enterprise Management</option>
-                  <option value="atom">ATOM — Tech & Operations Engine</option>
-                  <option value="pointo">PointO — POS & Distribution</option>
+                  {products && products.length > 0 ? (
+                    products.map(p => (
+                      <option key={p.slug} value={p.slug}>
+                        {p.name} ({p.product_id || p.slug.toUpperCase()}){p.restricted ? ' — By Invitation' : ''}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="nexora">NEXORA — Next-Gen Enterprise Management</option>
+                      <option value="atom">ATOM — Tech & Operations Engine</option>
+                      <option value="pointo">PointO — POS & Distribution</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -357,7 +378,7 @@ export default function OnboardingForm() {
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-            <Link href="/control-panel/modules/ecosystem/companies" className="btn" style={{ background: 'var(--lam-surface)', color: 'white', border: '1px solid var(--lam-border)' }}>
+            <Link href="/control-panel/clients" className="btn" style={{ background: 'var(--lam-surface)', color: 'white', border: '1px solid var(--lam-border)' }}>
               Cancel
             </Link>
             <button
