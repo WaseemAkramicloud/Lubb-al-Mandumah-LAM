@@ -22,7 +22,8 @@ export default function OnboardingForm({ products = [] }: Props) {
   const [isReviewStep, setIsReviewStep] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
   const [copiedCreds, setCopiedCreds] = useState(false)
-  const [showTempPwd, setShowTempPwd] = useState(false)
+  const [copiedPwdOnly, setCopiedPwdOnly] = useState(false)
+  const [showInitialPwd, setShowInitialPwd] = useState(false)
 
   // Form field state
   const [formData, setFormData] = useState({
@@ -84,7 +85,7 @@ export default function OnboardingForm({ products = [] }: Props) {
   const handleReviewStep = (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.company_name.trim() || !formData.owner_first_name.trim() || !formData.owner_email.trim()) {
-      alert('Please fill in required fields (Company Name, Owner First Name, Owner Email).')
+      alert('Please fill in required fields (Company Name, Owner First Name, LAM ID / Owner Email).')
       return
     }
     setIsReviewStep(true)
@@ -98,9 +99,17 @@ export default function OnboardingForm({ products = [] }: Props) {
     }
   }
 
+  const handleCopyPassword = () => {
+    if (state?.temporaryPassword) {
+      navigator.clipboard.writeText(state.temporaryPassword)
+      setCopiedPwdOnly(true)
+      setTimeout(() => setCopiedPwdOnly(false), 2500)
+    }
+  }
+
   const handleCopyDetails = () => {
     if (state?.ownerEmail && state?.temporaryPassword) {
-      const details = `LAM ID Login Details:\nURL: https://id.lubbalmandumah.com\nLAM ID Email: ${state.ownerEmail}\nTemporary Password: ${state.temporaryPassword}\nNote: Mandatory password change required at first login.`
+      const details = `LAM ID Login Details:\nURL: https://id.lubbalmandumah.com\nLAM ID / Login Email: ${state.ownerEmail}\nInitial Password: ${state.temporaryPassword}\nNote: The Company Owner may keep this password or change it later from their LAM ID account.`
       navigator.clipboard.writeText(details)
       setCopiedCreds(true)
       setTimeout(() => setCopiedCreds(false), 2500)
@@ -128,38 +137,49 @@ export default function OnboardingForm({ products = [] }: Props) {
               <div>Subscribed Product: <strong style={{ color: 'var(--lam-gold)' }}>{state.productSlug?.toUpperCase()}</strong></div>
               <div>Seat Allowance: <strong style={{ color: 'var(--lam-white)' }}>1 of {state.maxSeats} Seats Used (1 Owner Seat Consumed)</strong></div>
               <div>Owner Product Access: <span style={{ color: '#2ecc71', fontWeight: 600 }}>{state.productSlug?.toUpperCase()} — ACTIVE</span></div>
-              <div>Account Status: <strong style={{ color: 'var(--lam-gold)' }}>{state.isExistingIdentity ? 'Active Identity' : 'Awaiting First Login'}</strong></div>
+              <div>Account Status: <strong style={{ color: 'var(--lam-gold)' }}>{state.isExistingIdentity ? 'Active Identity' : 'Account Ready'}</strong></div>
             </div>
 
             {state.isExistingIdentity ? (
               <div style={{ padding: '0.85rem', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.3)', borderRadius: '4px', color: '#2ecc71', fontSize: 'var(--text-xs)' }}>
-                ℹ️ <strong>Existing LAM ID Detected:</strong> Primary owner already has a valid LAM ID account ({state.ownerEmail}). Existing login credentials remain valid and were NOT reset.
+                ℹ️ <strong>Existing LAM ID Detected:</strong> Primary owner already has a valid LAM ID account ({state.ownerEmail}). Existing login credentials remain unchanged.
               </div>
             ) : state.provisionMode === 'password' && state.temporaryPassword ? (
               <div style={{ borderTop: '1px solid var(--lam-border)', paddingTop: '1.25rem' }}>
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase', marginBottom: '0.75rem', fontWeight: 600 }}>
-                  🔑 Temporary Login Credentials (One-Time Display)
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-gold)', textTransform: 'uppercase', marginBottom: '0.75rem', fontWeight: 600 }}>
+                  🔑 LAM ID Login Details
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: 'var(--text-xs)', background: 'var(--lam-surface)', padding: '1rem', borderRadius: '4px', border: '1px solid var(--lam-border)' }}>
                   <div>Login URL: <code style={{ color: 'var(--lam-gold)' }}>https://id.lubbalmandumah.com</code></div>
-                  <div>LAM ID Email: <code style={{ color: 'var(--lam-white)' }}>{state.ownerEmail}</code></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span>Temporary Password:</span>
+                  <div>LAM ID / Login Email: <code style={{ color: 'var(--lam-white)' }}>{state.ownerEmail}</code></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span>Initial Password:</span>
                     <code style={{ background: 'black', padding: '0.2rem 0.5rem', borderRadius: '3px', color: 'var(--lam-gold)', fontFamily: 'monospace' }}>
-                      {showTempPwd ? state.temporaryPassword : '••••••••••••••••'}
+                      {showInitialPwd ? state.temporaryPassword : '••••••••••••••••'}
                     </code>
                     <button
                       type="button"
-                      onClick={() => setShowTempPwd(!showTempPwd)}
-                      style={{ background: 'none', border: 'none', color: 'var(--lam-silver-dim)', cursor: 'pointer', fontSize: '11px', textDecoration: 'underline' }}
+                      onClick={() => setShowInitialPwd(!showInitialPwd)}
+                      className="btn"
+                      style={{ background: 'var(--lam-surface)', border: '1px solid var(--lam-border)', color: 'var(--lam-silver-light)', fontSize: '11px', padding: '0.2rem 0.5rem' }}
                     >
-                      {showTempPwd ? 'Hide' : 'Reveal'}
+                      {showInitialPwd ? 'Hide' : 'Reveal'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyPassword}
+                      className="btn"
+                      style={{ background: 'var(--lam-surface)', border: '1px solid var(--lam-border)', color: 'var(--lam-white)', fontSize: '11px', padding: '0.2rem 0.5rem' }}
+                    >
+                      {copiedPwdOnly ? 'Password Copied! ✓' : 'Copy Password'}
                     </button>
                   </div>
-                  <div>Password Status: <span style={{ color: '#f1c40f', fontWeight: 600 }}>Mandatory Change Required at First Login</span></div>
+                  <div style={{ color: 'var(--lam-silver-dim)', fontSize: '11px', marginTop: '0.25rem' }}>
+                    The Company Owner may keep this password or change it later from their LAM ID account.
+                  </div>
                 </div>
 
-                <div style={{ marginTop: '0.85rem' }}>
+                <div style={{ marginTop: '0.85rem', display: 'flex', gap: '0.75rem' }}>
                   <button
                     type="button"
                     onClick={handleCopyDetails}
@@ -363,10 +383,10 @@ export default function OnboardingForm({ products = [] }: Props) {
             </div>
           </div>
 
-          {/* Section 2: Primary Owner Identity */}
+          {/* Section 2: Primary Owner Identity & LAM ID Login */}
           <div>
             <h3 style={{ fontSize: 'var(--text-base)', color: 'var(--lam-gold)', marginBottom: '1rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.5rem' }}>
-              2. Primary Owner Identity
+              2. Primary Owner Identity & LAM ID Login
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
               <div className="lam-form-group">
@@ -395,18 +415,21 @@ export default function OnboardingForm({ products = [] }: Props) {
               </div>
 
               <div className="lam-form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="lam-label">Owner Work Email Address (LAM ID Login) *</label>
+                <label className="lam-label" style={{ color: 'var(--lam-gold)', fontWeight: 600 }}>
+                  LAM ID / Login Email *
+                </label>
                 <input
                   type="email"
                   name="owner_email"
                   required
                   value={formData.owner_email}
                   onChange={handleInputChange}
-                  placeholder="ayesha@purembil.com"
+                  placeholder="owner@company.com (e.g. ayesha@purembil.com)"
                   className="lam-input"
+                  style={{ border: '1px solid var(--lam-gold)' }}
                 />
-                <span style={{ fontSize: '11px', color: 'var(--lam-silver-dim)', marginTop: '0.25rem', display: 'block' }}>
-                  The Primary Owner work email serves as their central LAM ID login identifier.
+                <span style={{ fontSize: '11px', color: 'var(--lam-silver-dim)', marginTop: '0.35rem', display: 'block', lineHeight: 1.4 }}>
+                  This is the email/ID the Company Owner will use to sign in to LAM ID and access the company's subscribed LAM products. (Primary Owner Work Email = LAM ID Login Email. No separate human username or company code required for login).
                 </span>
               </div>
             </div>
@@ -505,10 +528,10 @@ export default function OnboardingForm({ products = [] }: Props) {
                 />
                 <div>
                   <div style={{ color: 'var(--lam-white)', fontWeight: 600, fontSize: 'var(--text-sm)' }}>
-                    Option A: Temporary Credentials (Recommended for current operation / testing)
+                    Option A: Direct Credentials / Initial Password (Default)
                   </div>
                   <div style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', marginTop: '0.25rem', lineHeight: 1.5 }}>
-                    Generates a strong temporary password server-side. The LAM Superadmin can copy and deliver the initial credentials to the customer. Forces a mandatory password update at first login.
+                    Generates a strong Initial Password server-side. The administrator provides the LAM ID + Initial Password to the Company Owner. The owner may keep this password or change it later voluntarily.
                   </div>
                 </div>
               </label>
@@ -563,7 +586,7 @@ export default function OnboardingForm({ products = [] }: Props) {
             Review New Client Setup
           </h2>
           <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)', marginBottom: '1.5rem' }}>
-            Please verify the client company details, primary owner identity, and account access setup before confirming creation.
+            Please verify the client company details, primary owner identity, and login details before confirming creation.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
@@ -578,12 +601,17 @@ export default function OnboardingForm({ products = [] }: Props) {
             </div>
 
             <div style={{ background: 'var(--lam-surface)', padding: '1.25rem', borderRadius: '6px', border: '1px solid var(--lam-border)' }}>
-              <h4 style={{ fontSize: 'var(--text-sm)', color: 'var(--lam-gold)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Primary Owner & Access</h4>
+              <h4 style={{ fontSize: 'var(--text-sm)', color: 'var(--lam-gold)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+                Company Owner Login Details
+              </h4>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-white)', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <div>Owner Name: <strong>{formData.owner_first_name} {formData.owner_last_name}</strong></div>
-                <div>LAM ID / Work Email: <strong>{formData.owner_email}</strong></div>
-                <div>Company Role: <strong style={{ color: 'var(--lam-gold)' }}>Company Owner</strong></div>
-                <div>Access Mode: <span>{formData.provision_mode === 'password' ? 'Temporary Credentials (Option A)' : 'Secure Setup Link (Option B)'}</span></div>
+                <div>Company Owner: <strong>{formData.owner_first_name} {formData.owner_last_name}</strong></div>
+                <div>LAM ID / Login Email: <strong style={{ color: 'var(--lam-gold)' }}>{formData.owner_email}</strong></div>
+                <div>Login URL: <code style={{ color: 'var(--lam-gold)' }}>https://id.lubbalmandumah.com</code></div>
+                <div>Initial Password: <span>{formData.provision_mode === 'password' ? 'Will be generated when the client is created' : 'Setup Link selected'}</span></div>
+                <div>Password Change: <span>Optional (Customer may keep password or change voluntarily)</span></div>
+                <div>Company Role: <strong>Company Owner</strong></div>
+                <div>Subscribed Product(s): <strong>{formData.product_slug.toUpperCase()}</strong></div>
               </div>
             </div>
 

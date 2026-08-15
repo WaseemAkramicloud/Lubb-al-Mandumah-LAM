@@ -489,3 +489,26 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
   - **List View Status Filters**: Added status filter bar (`Active Clients | Suspended | Archived | All Clients`) to `/control-panel/clients`.
   - **Audit Logging**: Recorded events in `customer_audit_logs` (`client_suspended`, `client_reactivated`, `client_archived`, `permanent_deletion_initiated`, `permanent_deletion_completed`, `orphaned_identity_deleted`, `external_saas_deprovisioned`).
   - **Verification**: Tested lifecycle suite on synthetic test client via `scripts/test-client-lifecycle.ts`. `npm run build` compiled cleanly with 0 errors.
+
+---
+
+### Stage 18: Client User Management Controls & Initial Password Model (2026-08-15)
+- **Status**: Completed & Verified.
+- **What was implemented**:
+  - **Explicit LAM ID Field**: Added clearly labeled `LAM ID / Login Email` field in Onboarding Form step 1 with helper text explaining that Primary Owner Work Email is the canonical sign-in identity.
+  - **Review Screen Login Details**: Added `Company Owner Login Details` section in Review Step displaying Owner Name, LAM ID Email, Login URL (`https://id.lubbalmandumah.com`), Initial Password generation notice, optional password change note, role, and products.
+  - **Initial Password Model**: Replaced "Temporary Password" with **Initial Password** terminology. Default: `must_change_password = false` (password change is optional for the user, not forced by default).
+  - **Completion Screen Display**: Added `LAM ID Login Details` card displaying Login URL, LAM ID Email, Initial Password with `Reveal`, `Copy Password`, and `Copy Login Details` buttons.
+  - **Existing LAM ID Rule**: If entered email matches an existing LAM ID, displays `Existing LAM ID detected — existing login credentials will remain unchanged` without resetting existing credentials.
+  - **Client Users Directory Enhancements (`IdentitiesClient.tsx`)**:
+    - Filter tabs: `Active Users | Archived Users | Unassigned Users | All Users` with live badge counts.
+    - Actions per user: `View User`, `Archive User` / `Restore User`, `Delete User`.
+    - **Safe Delete User Confirmation Modal**: Superadmin-only danger modal requiring typing exact LAM ID / Email before enabling `Permanently Delete User`.
+    - **Safe Delete Enforcement**: If user still belongs to active client organization(s), deletion is BLOCKED with a clear explanation (`This LAM ID is still associated with one or more client organizations...`).
+  - **Client User Detail Page (`/control-panel/clients/users/[id]`)**:
+    - Full profile detail view with identity status, linked Auth UUID, last login date, organization memberships, and product access grants.
+    - Action buttons: `Archive User` / `Restore User`, `Reset / Issue New Password` (generates new password, shows once with `Reveal`/`Copy`, logs audit event), `Remove From Company`, `Delete User`.
+  - **Read-Only Audit**: Performed read-only audit of remaining database records (`scripts/audit-remaining-client-users.ts`), identifying 4 unassigned/orphaned identities without altering data.
+  - **Audit Logging**: Recorded events in `customer_audit_logs` (`customer_user_archived`, `customer_user_restored`, `customer_user_password_reset`, `customer_user_membership_removed`, `customer_user_deletion_blocked`, `customer_user_deleted`).
+  - **Verification & Build**: Tested synthetic user management via `scripts/test-client-user-controls.ts`. `npm run build` compiled cleanly with 0 errors across 63 routes.
+

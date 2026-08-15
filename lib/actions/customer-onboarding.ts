@@ -161,7 +161,7 @@ export async function onboardCustomerCompanyAction(
       // NEW IDENTITY PROVISIONING
       if (provisionMode === 'password') {
         if (!initialPassword || initialPassword.length < 8) {
-          initialPassword = `LAM-Temp-${Math.floor(100000 + Math.random() * 900000)}!`
+          initialPassword = `LAM-Init-${Math.floor(100000 + Math.random() * 900000)}!`
         }
 
         const { data: newAuth, error: authErr } = await supabase.auth.admin.createUser({
@@ -172,7 +172,7 @@ export async function onboardCustomerCompanyAction(
             first_name: ownerFirstName,
             last_name: ownerLastName,
             role: 'customer_owner',
-            must_change_password: true
+            must_change_password: false
           }
         })
 
@@ -191,7 +191,7 @@ export async function onboardCustomerCompanyAction(
           first_name: ownerFirstName,
           last_name: ownerLastName,
           status: 'active',
-          must_change_password: provisionMode === 'password' && !isExistingIdentity
+          must_change_password: false
         })
         .select()
         .single()
