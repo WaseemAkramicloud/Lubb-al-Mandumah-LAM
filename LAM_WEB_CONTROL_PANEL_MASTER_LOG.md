@@ -584,3 +584,49 @@ Before pushing to production, the project owner MUST manually perform these acti
 9. **Manual steps required from project owner**: None.
 10. **Known issues & deferred items**: None.
 11. **Exact recommended next step**: Refinement complete. System operational on production domain `https://staff.lubbalmandumah.com`.
+
+---
+
+### Stage 15: Route Consolidation, Client Management & Legacy UI Stabilisation (2026-08-15)
+1. **Current stage and status**: Completed & Live Verified.
+2. **What was implemented**:
+   - **Audit & Resolution of Manage → 404**: Pinpointed exact root cause. Query in `app/control-panel/modules/ecosystem/companies/[id]/page.tsx` attempted to select `assigned:staff_profiles!crm_companies_assigned_staff_fkey (id, first_name, last_name, email, staff_id)`. Column `email` does not exist on `staff_profiles`, causing Postgres error `42703` and returning `data: null`. Removed `email` from `staff_profiles` selection, allowing Unicore Enterprises (`6c75683e-5dc4-45a6-b434-7b287f108460` / `COMP-912057`) and all existing companies to open cleanly.
+   - **Staff Control Panel Not-Found Handler (`app/control-panel/not-found.tsx`)**: Created a staff-specific 404 page rendered inside the Control Panel layout with sidebar, header, and `← Back to Clients` / `Go to Dashboard` navigation. Prevents staff routing errors from falling back to public website 404.
+   - **Canonical Business Route Structure**:
+     - `/control-panel/clients` (Clients Registry Hub)
+     - `/control-panel/clients/new` (Onboard New Client)
+     - `/control-panel/clients/[companyId]` (Client Control Centre)
+     - `/control-panel/clients/users` (Client Users Directory)
+     - `/control-panel/clients/requests` (Business Requests & Leads)
+     - `/control-panel/subscriptions` (Products & Subscriptions Manager)
+   - **Legacy Route Redirection**: Configured 307 redirects in `next.config.ts` so any access to legacy `/control-panel/modules/ecosystem/*` or `/control-panel/modules/leads-clients` automatically redirects to canonical `/control-panel/clients/*` and `/control-panel/subscriptions`.
+   - **Dynamic Product Registry for Client Onboarding**: Updated `OnboardCustomerPage` (`companies/new/page.tsx`) to dynamically fetch assignable SaaS products from `cms_products` table (`lifecycle_status = 'Active'`) instead of hardcoding HTML options.
+3. **User-visible routes added/changed**:
+   - `/control-panel/clients`
+   - `/control-panel/clients/[companyId]`
+   - `/control-panel/clients/new`
+   - `/control-panel/clients/users`
+   - `/control-panel/clients/requests`
+   - `/control-panel/subscriptions`
+   - `/control-panel/not-found.tsx` (Staff 404)
+4. **Important files created/modified**:
+   - `app/control-panel/modules/ecosystem/companies/[id]/page.tsx` [Fixed staff_profiles query error]
+   - `app/control-panel/not-found.tsx` [Staff 404 Page]
+   - `app/control-panel/clients/page.tsx` [Canonical Clients Page]
+   - `app/control-panel/clients/[companyId]/page.tsx` [Canonical Client Profile Page]
+   - `app/control-panel/clients/new/page.tsx` [Canonical Onboarding Page & Dynamic Product Loading]
+   - `app/control-panel/clients/users/page.tsx` [Canonical Client Users Page]
+   - `app/control-panel/clients/requests/page.tsx` [Canonical Business Requests Page]
+   - `app/control-panel/subscriptions/page.tsx` [Canonical Subscriptions Page]
+   - `next.config.ts` [Legacy Route Redirects]
+   - `components/layout/SidebarNav.tsx` [Canonical Navigation Hrefs]
+5. **Database changes**: None required.
+6. **Authentication, roles and permissions**: Preserved 100% of staff auth, permissions, LAM ID, OIDC/SSO, RS256/JWKS, and domain/host isolation.
+7. **Environment variables required**: Unchanged.
+8. **Tests/build checks performed**:
+   - `npm run build`: Passed cleanly (Exit Code 0 across 100 static and dynamic routes).
+   - `npx tsx scripts/test-lam-sso-foundation.ts`: Passed 12/12 foundation security tests (100%).
+   - `git push origin main`: Pushed commit `1d09fe6` to `WaseemAkramicloud/Lubb-al-Mandumah-LAM.git`.
+9. **Manual steps required from project owner**: None.
+10. **Known issues & deferred items**: None.
+11. **Exact recommended next step**: Refinement & consolidation complete and live on production domain `https://staff.lubbalmandumah.com`.
