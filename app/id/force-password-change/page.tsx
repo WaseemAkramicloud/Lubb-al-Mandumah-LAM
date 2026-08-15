@@ -1,17 +1,13 @@
 'use client'
 
-import { useState, use } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { customerLogin } from '@/lib/actions/customer-auth'
-import Link from 'next/link'
+import { completeFirstPasswordChange } from '@/lib/actions/customer-auth'
 
-export default function CustomerLoginPage(props: { searchParams: Promise<{ redirect_to?: string; error?: string; error_description?: string }> }) {
-  const searchParams = use(props.searchParams)
+export default function ForcePasswordChangePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(searchParams.error_description || '')
-
-  const redirectTo = searchParams.redirect_to || '/portal'
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -20,8 +16,7 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
 
     try {
       const formData = new FormData(e.currentTarget)
-      formData.append('return_to', redirectTo)
-      const res = await customerLogin(formData)
+      const res = await completeFirstPasswordChange(formData)
 
       if (res.success) {
         if (res.redirectUrl) {
@@ -30,7 +25,7 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
           router.push('/portal')
         }
       } else {
-        setError(res.error || 'Authentication failed.')
+        setError(res.error || 'Password update failed.')
       }
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.')
@@ -69,10 +64,14 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
           }}>
             L<span style={{ color: 'var(--lam-gold)' }}>Λ</span>M ID
           </div>
-          <div style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            Central Customer Single Sign-On
+          <div style={{ color: 'var(--lam-gold)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+            Mandatory First-Login Password Setup
           </div>
         </div>
+
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-light)', marginBottom: '1.5rem', lineHeight: 1.5, textAlign: 'center' }}>
+          You authenticated using temporary login credentials. Please set your secure permanent password to activate your account and continue.
+        </p>
 
         {error && (
           <div style={{
@@ -92,32 +91,29 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="form-group">
             <label style={{ display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--lam-silver-dim)', marginBottom: '0.5rem' }}>
-              Work Email Address
+              New Permanent Password *
             </label>
             <input
-              type="email"
-              name="email"
+              type="password"
+              name="new_password"
               required
-              placeholder="name@company.com"
+              minLength={8}
+              placeholder="At least 8 characters"
               className="form-input"
               style={{ width: '100%' }}
             />
           </div>
 
           <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <label style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--lam-silver-dim)' }}>
-                Password
-              </label>
-              <Link href="/id/forgot-password" style={{ color: 'var(--lam-gold)', fontSize: 'var(--text-xs)', textDecoration: 'none' }}>
-                Forgot?
-              </Link>
-            </div>
+            <label style={{ display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--lam-silver-dim)', marginBottom: '0.5rem' }}>
+              Confirm New Password *
+            </label>
             <input
               type="password"
-              name="password"
+              name="confirm_password"
               required
-              placeholder="••••••••••••"
+              minLength={8}
+              placeholder="Re-enter new password"
               className="form-input"
               style={{ width: '100%' }}
             />
@@ -129,15 +125,9 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
             className="btn btn-primary"
             style={{ width: '100%', marginTop: '0.5rem', padding: '0.85rem' }}
           >
-            {loading ? 'Authenticating...' : 'Sign In with LAM ID'}
+            {loading ? 'Updating Password...' : 'Save Password & Proceed →'}
           </button>
         </form>
-
-        <div className="lam-divider" style={{ margin: '2rem 0' }} />
-
-        <div style={{ textAlign: 'center', fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)' }}>
-          LAM ID accounts are created through authorised LAM onboarding.
-        </div>
       </div>
     </div>
   )

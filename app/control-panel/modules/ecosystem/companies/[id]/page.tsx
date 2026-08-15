@@ -2,6 +2,7 @@ import { requirePermission } from '@/lib/auth/permissions'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { toggleCompanyStatusAction } from '@/lib/actions/customer-onboarding'
 import { EditCompanyModal } from './EditCompanyModal'
+import AdminOwnerActions from './AdminOwnerActions'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -271,28 +272,38 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
                             {user.first_name} {user.last_name || ''}
                             {isOwner && (
                               <span className="badge badge-gold" style={{ fontSize: '9px', marginLeft: '0.5rem' }}>
-                                OWNER
+                                COMPANY OWNER
                               </span>
+                            )}
+                            {isOwner && (
+                              <AdminOwnerActions customerId={user.id} companyId={company.id} ownerEmail={user.email} />
                             )}
                           </td>
                           <td style={{ padding: '0.65rem 0.85rem', color: 'var(--lam-silver-light)' }}>
                             {user.email}
                           </td>
-                          <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center', textTransform: 'capitalize', color: 'var(--lam-silver-light)' }}>
-                            {mem.company_role}
+                          <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center', color: 'var(--lam-silver-light)' }}>
+                            {isOwner ? 'Company Owner' : 'Member'}
                           </td>
                           <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
-                            <span style={{
-                              padding: '0.15rem 0.4rem',
-                              borderRadius: '3px',
-                              fontSize: '9px',
-                              fontWeight: 600,
-                              textTransform: 'uppercase',
-                              background: user.status === 'active' ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
-                              color: user.status === 'active' ? '#2ecc71' : '#e74c3c'
-                            }}>
-                              {user.status}
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'center' }}>
+                              <span style={{
+                                padding: '0.15rem 0.4rem',
+                                borderRadius: '3px',
+                                fontSize: '9px',
+                                fontWeight: 600,
+                                textTransform: 'uppercase',
+                                background: user.status === 'active' ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
+                                color: user.status === 'active' ? '#2ecc71' : '#e74c3c'
+                              }}>
+                                {user.status}
+                              </span>
+                              {user.must_change_password && (
+                                <span style={{ fontSize: '9px', color: '#f1c40f' }}>
+                                  Pwd Change Required
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td style={{ padding: '0.65rem 0.85rem', textAlign: 'right', color: 'var(--lam-silver-dim)' }}>
                             {user.last_login_at ? new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(user.last_login_at)) : 'Never'}

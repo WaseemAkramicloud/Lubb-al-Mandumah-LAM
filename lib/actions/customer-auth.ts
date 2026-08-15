@@ -28,25 +28,33 @@ export async function customerLogin(formData: FormData) {
 
   let authUserId = authData?.user?.id
 
-  // Fallback check in case customer identity profile is mapped by email
   if (authErr || !authUserId) {
-    // Audit failed attempt
     const { data: custAttempt } = await supabase
       .from('customer_identities')
       .select('id')
-      .eq('email', email)
+      .ilike('email', email)
       .maybeSingle()
 
     await logCustomerAudit(custAttempt?.id || null, null, 'login_failed_password', { email })
     return { success: false, error: 'Invalid customer email or password.' }
   }
 
-  // 2. Fetch linked customer identity profile
-  const { data: customer, error: profileErr } = await supabase
+  // 2. Fetch linked customer identity profile (robust lookup)
+  let { data: customer, error: profileErr } = await supabase
     .from('customer_identities')
     .select('*')
-    .or(`auth_user_id.eq.${authUserId},email.eq.${email}`)
+    .eq('auth_user_id', authUserId)
     .maybeSingle()
+
+  if (!customer) {
+    const { data: custByEmail } = await supabase
+      .from('customer_identities')
+      .select('*')
+      .ilike('email', email)
+      .maybeSingle()
+
+    customer = custByEmail
+  }
 
   if (profileErr || !customer) {
     return { success: false, error: 'Customer profile not found.' }
@@ -57,13 +65,36 @@ export async function customerLogin(formData: FormData) {
     return { success: false, error: 'Account suspended. Please contact your organization administrator.' }
   }
 
-  // Ensure auth_user_id is linked to canonical Auth user
+  // Auto-stitch auth_user_id if unlinked
   if (!customer.auth_user_id) {
     await supabase.from('customer_identities').update({ auth_user_id: authUserId }).eq('id', customer.id)
   }
 
+  // Check mandatory first-login password change requirement
+  const isMustChangePassword = customer.must_change_password === true || authData.user?.user_metadata?.must_change_password === true
+
+  if (isMustChangePassword) {
+    const cookieStore = await cookies()
+    const pendingToken = crypto.randomUUID()
+    cookieStore.set('lam_pending_pwd_change', JSON.stringify({ authUserId, customerId: customer.id, returnTo: safeReturnTo, token: pendingToken }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 600 // 10 minutes
+    })
+
+    await logCustomerAudit(customer.id, null, 'login_forced_password_change_required', { email })
+
+    return {
+      success: true,
+      requirePasswordChange: true,
+      redirectUrl: `/id/force-password-change?return_to=${encodeURIComponent(safeReturnTo)}`
+    }
+  }
+
   const sessionToken = 'csess_' + crypto.randomUUID().replace(/-/g, '')
-  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString() // 30 days
+  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString()
 
   await supabase.from('customer_sessions').insert({
     customer_id: customer.id,
@@ -89,6 +120,76 @@ export async function customerLogin(formData: FormData) {
   await logCustomerAudit(customer.id, null, 'customer_login_success', { email })
 
   return { success: true, redirectUrl: safeReturnTo, customerId: customer.id }
+}
+
+export async function completeFirstPasswordChange(formData: FormData) {
+  const newPassword = (formData.get('new_password') as string)?.trim()
+  const confirmPassword = (formData.get('confirm_password') as string)?.trim()
+
+  if (!newPassword || newPassword.length < 8) {
+    return { success: false, error: 'Password must be at least 8 characters long.' }
+  }
+
+  if (newPassword !== confirmPassword) {
+    return { success: false, error: 'Passwords do not match.' }
+  }
+
+  const cookieStore = await cookies()
+  const pendingCookie = cookieStore.get('lam_pending_pwd_change')?.value
+
+  if (!pendingCookie) {
+    return { success: false, error: 'Password change session expired or invalid. Please log in again.' }
+  }
+
+  try {
+    const { authUserId, customerId, returnTo } = JSON.parse(pendingCookie)
+    const supabase = getSupabaseAdmin()
+
+    // Update password in Supabase Auth & metadata
+    const { error: authErr } = await supabase.auth.admin.updateUserById(authUserId, {
+      password: newPassword,
+      user_metadata: { must_change_password: false }
+    })
+
+    if (authErr) {
+      return { success: false, error: `Failed to update password: ${authErr.message}` }
+    }
+
+    // Update customer_identities
+    await supabase
+      .from('customer_identities')
+      .update({ must_change_password: false, updated_at: new Date().toISOString() })
+      .eq('id', customerId)
+
+    // Issue active session token
+    const sessionToken = 'csess_' + crypto.randomUUID().replace(/-/g, '')
+    const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString()
+
+    await supabase.from('customer_sessions').insert({
+      customer_id: customerId,
+      session_token: sessionToken,
+      expires_at: expiresAt,
+      is_active: true
+    })
+
+    cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 86400
+    })
+
+    // Clear pending password change cookie
+    cookieStore.delete('lam_pending_pwd_change')
+
+    await logCustomerAudit(customerId, null, 'first_login_password_changed', {})
+
+    const safeReturnTo = (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) ? returnTo : '/portal'
+    return { success: true, redirectUrl: safeReturnTo }
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to complete password change.' }
+  }
 }
 
 export async function getCurrentCustomer() {

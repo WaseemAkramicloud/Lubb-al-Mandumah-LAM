@@ -455,3 +455,22 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
   - **Legacy Route Redirection**: Added 307 redirects in `next.config.ts` mapping legacy `/control-panel/modules/ecosystem/*` and `/control-panel/modules/leads-clients` URLs to canonical business routes.
   - **Dynamic Onboarding Product Registry**: Updated `OnboardCustomerPage` (`companies/new/page.tsx`) to dynamically load active SaaS products from `cms_products` table (`lifecycle_status = 'Active'`) instead of hardcoding HTML options.
   - **Verification**: `npm run build` compiled with exit code 0 across 100 routes. `npx tsx scripts/test-lam-sso-foundation.ts` passed 12/12 security tests (100%). Pushed commit `1d09fe6` to GitHub.
+
+---
+
+### Stage 16: Customer Identity Provisioning, Account Access Setup & NEXORA Integration (2026-08-15)
+- **Status**: Completed & Verified.
+- **What was implemented**:
+  - **Canonical Login & Terminology**: Primary Owner Work Email is canonical LAM ID login identifier. Updated user-facing terminology to **Company Owner**.
+  - **Onboarding Access Setup (Options A & B)**:
+    - Option A (Temporary Credentials): Generates strong temporary password server-side, flags `must_change_password: true` in user metadata, displays credentials on secure completion screen with `[Reveal]` and `[Copy Login Details]`.
+    - Option B (Secure Setup Link): Generates single-use secure setup link with `[Copy Setup Link]`.
+  - **Existing Identity Protection**: Reuses existing Auth & customer identities when adding new memberships. Never automatically resets existing passwords.
+  - **Mandatory First-Login Password Change**: Built `/id/force-password-change` page and `completeFirstPasswordChange` action. Preserves OAuth pending authorization state in secure HTTP-Only `lam_pending_pwd_change` session cookie.
+  - **Client Detail Page Enhancements**: Added explicit human-readable access status badges (Company, Entitlement, Tenant, Identity, Explicit Product Access, Password Status), seat usage calculation (1 of N seats used by Company Owner), and `AdminOwnerActions` for issuing temporary passwords with global impact warning.
+  - **Public Sign-In Page Wording**: Updated `/id/login` footer text to `LAM ID accounts are created through authorised LAM onboarding.`
+  - **Verification Testing**: Tested all 3 scenarios:
+    1. **Unicore Enterprises (Repair)**: Verified owner identity (`waazimrana@gmail.com`), membership, entitlement, tenant, and explicit NEXORA access grant.
+    2. **Purembil Fresh Onboarding (NEW Identity)**: Verified atomic creation of `Ayesha Siddiqua` (`ayesha@purembil.com`), temporary password login, forced password update, and clearance of `must_change_password` flag.
+    3. **Purembil (Existing Identity)**: Verified adding existing identity to a second company (`Purembil Logistics`) while preserving existing login credentials untouched.
+  - **Build Verification**: `npm run build` passed cleanly across 61 routes with 0 errors.
