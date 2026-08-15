@@ -12,16 +12,13 @@ export default async function LeadsListPage() {
   
   const supabase = await createClient()
 
-  // Fetch leads with relational product name and staff assignment
+  // Fetch leads with relational product name
   const { data: leads, error } = await supabase
     .from('crm_leads')
     .select(`
       id, source_type, contact_person, company, email, interested_product, product_slug, status, created_at,
       assigned_to,
-      assignee:staff_profiles!crm_leads_assigned_to_fkey (
-        first_name, last_name
-      ),
-      product:cms_products!crm_leads_product_slug_fkey (
+      product:cms_products (
         name
       )
     `)
@@ -30,6 +27,13 @@ export default async function LeadsListPage() {
   if (error) {
     console.error("Error fetching leads:", error)
   }
+
+  // Fetch staff profiles for assigned_to resolution
+  const { data: staffList } = await supabase
+    .from('staff_profiles')
+    .select('id, first_name, last_name, staff_id')
+
+  const staffMap = new Map((staffList || []).map(s => [s.id, s]))
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -92,7 +96,7 @@ export default async function LeadsListPage() {
                     {productDisplay}
                   </td>
                   <td style={{ padding: '1rem', color: 'var(--lam-silver-light)', fontSize: 'var(--text-sm)' }}>
-                    {lead.assignee ? `${(lead.assignee as any).first_name} ${(lead.assignee as any).last_name}` : <span style={{ color: 'var(--lam-silver-dim)' }}>Unassigned</span>}
+                    {lead.assigned_to && staffMap.has(lead.assigned_to) ? `${staffMap.get(lead.assigned_to)?.first_name} ${staffMap.get(lead.assigned_to)?.last_name || ''}` : <span style={{ color: 'var(--lam-silver-dim)' }}>Unassigned</span>}
                   </td>
                   <td style={{ padding: '1rem' }}>
                     <span style={{
