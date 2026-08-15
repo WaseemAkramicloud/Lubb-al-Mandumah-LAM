@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { grantCompanyEntitlement, revokeCompanyEntitlement } from '@/lib/actions/ecosystem-admin'
 
 interface Props {
@@ -36,7 +37,7 @@ export function EntitlementsClient({ entitlements, companies, products }: Props)
   }
 
   const handleRevoke = async (companyId: string, productSlug: string) => {
-    if (!window.confirm(`Are you sure you want to suspend entitlement for ${productSlug.toUpperCase()}?`)) return
+    if (!window.confirm(`Are you sure you want to suspend subscription for ${productSlug.toUpperCase()}?`)) return
     setLoading(true)
     setError('')
     try {
@@ -63,7 +64,7 @@ export function EntitlementsClient({ entitlements, companies, products }: Props)
           onClick={() => setShowGrantForm(prev => !prev)}
           className="btn btn-primary"
         >
-          {showGrantForm ? 'Close Form' : '+ Grant New Entitlement'}
+          {showGrantForm ? 'Close Form' : '+ Assign Product Subscription'}
         </button>
       </div>
 
@@ -71,14 +72,14 @@ export function EntitlementsClient({ entitlements, companies, products }: Props)
       {showGrantForm && (
         <div className="lam-card" style={{ marginBottom: '2rem', border: '1px solid var(--lam-gold)' }}>
           <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-gold)', marginBottom: '1.5rem' }}>
-            Grant / Update Company Product Entitlement
+            Assign / Update Product Subscription
           </h2>
 
           <form onSubmit={handleGrant} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div className="form-group">
-              <label>Select Organization</label>
+              <label>Select Client</label>
               <select name="company_id" required className="form-input">
-                <option value="">— Select Organization —</option>
+                <option value="">— Select Client —</option>
                 {companies.map(c => (
                   <option key={c.id} value={c.id}>{c.name} ({c.company_id || 'ID'})</option>
                 ))}
@@ -98,6 +99,7 @@ export function EntitlementsClient({ entitlements, companies, products }: Props)
             <div className="form-group">
               <label>Plan Tier</label>
               <select name="plan_tier" defaultValue="standard" className="form-input">
+                <option value="demo">Demo / Trial</option>
                 <option value="starter">Starter</option>
                 <option value="standard">Standard</option>
                 <option value="enterprise">Enterprise</option>
@@ -125,7 +127,7 @@ export function EntitlementsClient({ entitlements, companies, products }: Props)
 
             <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
               <button type="submit" disabled={loading} className="btn btn-primary">
-                {loading ? 'Saving Entitlement...' : 'Save Product Entitlement'}
+                {loading ? 'Saving Subscription...' : 'Confirm Subscription Assignment'}
               </button>
             </div>
           </form>
@@ -137,9 +139,9 @@ export function EntitlementsClient({ entitlements, companies, products }: Props)
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--lam-border)', background: 'rgba(255, 255, 255, 0.02)' }}>
-              <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' }}>Company</th>
+              <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' }}>Client</th>
               <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' }}>Product</th>
-              <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' }}>Plan</th>
+              <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' }}>Subscription Plan</th>
               <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' }}>Seat Limit</th>
               <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' }}>Status</th>
               <th style={{ padding: '1rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
@@ -153,7 +155,13 @@ export function EntitlementsClient({ entitlements, companies, products }: Props)
               return (
                 <tr key={ent.id} style={{ borderBottom: '1px solid var(--lam-border)' }}>
                   <td style={{ padding: '1rem' }}>
-                    <div style={{ color: 'var(--lam-white)', fontWeight: 500 }}>{comp.name}</div>
+                    {comp.id ? (
+                      <Link href={`/control-panel/modules/ecosystem/companies/${comp.id}`} style={{ color: 'var(--lam-gold)', textDecoration: 'none', fontWeight: 600 }}>
+                        {comp.name}
+                      </Link>
+                    ) : (
+                      <div style={{ color: 'var(--lam-white)', fontWeight: 500 }}>{comp.name}</div>
+                    )}
                     <div style={{ fontFamily: 'monospace', fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)' }}>{comp.company_id}</div>
                   </td>
                   <td style={{ padding: '1rem' }}>

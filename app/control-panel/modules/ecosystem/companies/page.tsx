@@ -28,23 +28,34 @@ export default async function EcosystemCompaniesPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <Link href="/control-panel/modules/ecosystem" style={{ color: 'var(--lam-gold)', textDecoration: 'none', fontSize: 'var(--text-xs)' }}>
-              ← Ecosystem Admin
-            </Link>
-          </div>
-          <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)' }}>
-            Customer Accounts & Organizations
+          <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)', marginBottom: '0.25rem' }}>
+            Clients & Customer Organizations
           </h1>
           <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)' }}>
-            Central administration of standard and demo customer accounts, entitlements, and lifecycle status.
+            Central management of client company accounts, subscriptions, primary contacts, and operational statuses.
           </p>
         </div>
 
         <Link href="/control-panel/modules/ecosystem/companies/new" className="btn btn-primary" style={{ padding: '0.65rem 1.35rem', fontWeight: 600 }}>
-          + Onboard New Customer
+          + Onboard New Client
+        </Link>
+      </div>
+
+      {/* Navigation Sub-Tabs */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
+        <span style={{ padding: '0.5rem 1rem', background: 'rgba(201, 168, 76, 0.15)', color: 'var(--lam-gold)', borderRadius: '4px', fontSize: 'var(--text-xs)', fontWeight: 600, border: '1px solid rgba(201, 168, 76, 0.3)' }}>
+          🏢 Existing Clients ({companies?.length || 0})
+        </span>
+        <Link href="/control-panel/modules/ecosystem/companies/new" style={{ padding: '0.5rem 1rem', background: 'var(--lam-surface)', color: 'var(--lam-silver)', borderRadius: '4px', fontSize: 'var(--text-xs)', textDecoration: 'none', border: '1px solid var(--lam-border)' }}>
+          ➕ Onboard New Client
+        </Link>
+        <Link href="/control-panel/modules/ecosystem/identities" style={{ padding: '0.5rem 1rem', background: 'var(--lam-surface)', color: 'var(--lam-silver)', borderRadius: '4px', fontSize: 'var(--text-xs)', textDecoration: 'none', border: '1px solid var(--lam-border)' }}>
+          👤 Client Users
+        </Link>
+        <Link href="/control-panel/modules/leads-clients" style={{ padding: '0.5rem 1rem', background: 'var(--lam-surface)', color: 'var(--lam-silver)', borderRadius: '4px', fontSize: 'var(--text-xs)', textDecoration: 'none', border: '1px solid var(--lam-border)' }}>
+          📩 Business Requests / Leads
         </Link>
       </div>
 
@@ -52,12 +63,12 @@ export default async function EcosystemCompaniesPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
           <thead>
             <tr style={{ background: 'var(--lam-surface-elevated)', borderBottom: '1px solid var(--lam-border)' }}>
-              <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Company ID</th>
+              <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Client ID</th>
               <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Company Name</th>
-              <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Type</th>
-              <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Primary Owner</th>
-              <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Entitlements</th>
-              <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Account Status</th>
+              <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Client Type</th>
+              <th style={{ textAlign: 'left', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Primary Contact / Owner</th>
+              <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Subscriptions</th>
+              <th style={{ textAlign: 'center', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Company Status</th>
               <th style={{ textAlign: 'right', padding: '0.85rem 1.25rem', color: 'var(--lam-silver-dim)' }}>Actions</th>
             </tr>
           </thead>
@@ -125,8 +136,8 @@ export default async function EcosystemCompaniesPage() {
                     </td>
                     <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <Link href={`/control-panel/modules/ecosystem/companies/${comp.id}`} className="btn btn-primary" style={{ padding: '0.25rem 0.6rem', fontSize: 'var(--text-xs)' }}>
-                          Details
+                        <Link href={`/control-panel/modules/ecosystem/companies/${comp.id}`} className="btn btn-primary" style={{ padding: '0.3rem 0.75rem', fontSize: 'var(--text-xs)' }}>
+                          Manage →
                         </Link>
 
                         <form action={async () => {

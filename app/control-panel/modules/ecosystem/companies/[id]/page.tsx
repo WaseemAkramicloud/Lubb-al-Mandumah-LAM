@@ -112,7 +112,7 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
       {/* Top Header & Navigation */}
       <div style={{ marginBottom: '1.5rem' }}>
         <Link href="/control-panel/modules/ecosystem/companies" style={{ color: 'var(--lam-gold)', textDecoration: 'none', fontSize: 'var(--text-xs)' }}>
-          ← Back to Customer Accounts
+          ← Back to Clients
         </Link>
       </div>
 

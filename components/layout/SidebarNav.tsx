@@ -17,59 +17,84 @@ export default function SidebarNav({ permissions, isSuperadmin }: SidebarNavProp
     return !!permissions[moduleName]
   }
 
-  const navItems = [
-    { href: '/control-panel/dashboard', label: 'Dashboard', module: null },
-    { href: '/control-panel/modules/ecosystem', label: 'Ecosystem Admin', module: 'leads_clients' as ModuleName },
-    { href: '/control-panel/modules/leads-clients', label: 'Leads & Clients', module: 'leads_clients' as ModuleName },
-    { href: '/control-panel/modules/site-management', label: 'Site Management', module: 'site_management' as ModuleName },
-    { href: '/control-panel/modules/products', label: 'Products', module: 'products' as ModuleName },
-    { href: '/control-panel/modules/solutions', label: 'Solutions', module: 'site_management' as ModuleName },
-    { href: '/control-panel/modules/industries', label: 'Industries', module: 'site_management' as ModuleName },
-    { href: '/control-panel/modules/insights', label: 'Insights', module: 'insights' as ModuleName },
-    { href: '/control-panel/modules/pricing', label: 'Pricing & Plans', module: 'pricing_plans' as ModuleName },
-    { href: '/control-panel/modules/careers', label: 'Careers', module: 'careers' as ModuleName },
-    { href: '/control-panel/modules/media-library', label: 'Media Library', module: 'media_library' as ModuleName },
-    
-    // Admin specific
-    { href: '/control-panel/users', label: 'User Management', module: 'user_management' as ModuleName },
-    { href: '/control-panel/access', label: 'Access & Permissions', module: 'access_permissions' as ModuleName },
-    { href: '/control-panel/audit', label: 'Audit Log', module: 'audit_log' as ModuleName },
-    { href: '/control-panel/modules/system-settings', label: 'System Settings', module: 'system_settings' as ModuleName },
-    
-    // Personal
-    { href: '/control-panel/profile', label: 'My Profile', module: null },
-    { href: '/control-panel/settings', label: 'Settings', module: null },
+  const navGroups = [
+    {
+      group: 'OVERVIEW',
+      items: [
+        { href: '/control-panel/dashboard', label: 'Dashboard', module: null },
+      ]
+    },
+    {
+      group: 'BUSINESS',
+      items: [
+        { href: '/control-panel/modules/ecosystem/companies', label: 'Clients', module: 'leads_clients' as ModuleName },
+        { href: '/control-panel/modules/ecosystem/entitlements', label: 'Products & Subscriptions', module: 'leads_clients' as ModuleName },
+      ]
+    },
+    {
+      group: 'WEBSITE',
+      items: [
+        { href: '/control-panel/modules/site-management', label: 'Website Management', module: 'site_management' as ModuleName },
+      ]
+    },
+    {
+      group: 'ADMINISTRATION',
+      items: [
+        { href: '/control-panel/users', label: 'Staff Users', module: 'user_management' as ModuleName },
+        { href: '/control-panel/audit', label: 'Audit Log', module: 'audit_log' as ModuleName },
+        { href: '/control-panel/modules/system-settings', label: 'System Settings', module: 'system_settings' as ModuleName },
+        { href: '/control-panel/profile', label: 'My Profile', module: null },
+      ]
+    }
   ]
 
   return (
-    <nav style={{ flex: 1, padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-      {navItems.map((item) => {
-        // Only show if user has access (or if it requires no specific module permission)
-        if (item.module && !canAccess(item.module)) return null
-
-        // Check active state
-        // Exact match for dashboard/profile/settings, prefix match for modules (so subpages stay active)
-        const isActive = item.href === '/control-panel/dashboard' 
-          ? pathname === item.href
-          : pathname?.startsWith(item.href)
+    <nav style={{ flex: 1, padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
+      {navGroups.map((group) => {
+        const visibleItems = group.items.filter(item => !item.module || canAccess(item.module))
+        if (visibleItems.length === 0) return null
 
         return (
-          <Link
-            key={item.href}
-            href={item.href}
-            style={{
-              padding: '0.75rem 1rem',
-              borderRadius: 'var(--radius-sm)',
-              color: isActive ? 'var(--lam-white)' : 'var(--lam-silver)',
-              background: isActive ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-              fontSize: 'var(--text-sm)',
-              fontWeight: isActive ? 600 : 400,
-              textDecoration: 'none',
-              transition: 'background 0.2s, color 0.2s'
-            }}
-          >
-            {item.label}
-          </Link>
+          <div key={group.group}>
+            <div style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              color: 'var(--lam-silver-dim)',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              marginBottom: '0.5rem',
+              paddingLeft: '0.75rem'
+            }}>
+              {group.group}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              {visibleItems.map((item) => {
+                const isActive = item.href === '/control-panel/dashboard'
+                  ? pathname === item.href
+                  : pathname?.startsWith(item.href)
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    style={{
+                      padding: '0.6rem 0.85rem',
+                      borderRadius: 'var(--radius-sm)',
+                      color: isActive ? 'var(--lam-gold)' : 'var(--lam-silver)',
+                      background: isActive ? 'rgba(201, 168, 76, 0.1)' : 'transparent',
+                      borderLeft: isActive ? '3px solid var(--lam-gold)' : '3px solid transparent',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: isActive ? 600 : 400,
+                      textDecoration: 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
         )
       })}
     </nav>

@@ -41,79 +41,43 @@ export default async function DashboardPage() {
     return false
   })
 
-  // Fetch Widget Data
+  // Fetch Business Metric Counts
   const adminClient = getSupabaseAdmin()
+
+  const { count: totalClientsCount } = await adminClient.from('crm_companies').select('*', { count: 'exact', head: true })
+  const { count: activeSubscriptionsCount } = await adminClient.from('customer_product_entitlements').select('*', { count: 'exact', head: true }).eq('status', 'active')
+  const { count: totalProductsCount } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true })
+  const { count: newRequestsCount } = await adminClient.from('crm_leads').select('*', { count: 'exact', head: true }).eq('status', 'New')
   
-  let newRequestsCount = 0
-  let myAssignedCount = 0
-  let recentUpdatesCount = 0
-  
-  if (permittedLayout.includes('leads') || permittedLayout.includes('my_leads') || permittedLayout.includes('follow_ups')) {
-    const { count: newCount } = await adminClient.from('crm_leads').select('*', { count: 'exact', head: true }).eq('status', 'New')
-    newRequestsCount = newCount || 0
+  const now = new Date().toISOString()
+  const thirtyDaysFromNow = new Date(Date.now() + 30 * 86400000).toISOString()
+  const { count: expiringSubscriptionsCount } = await adminClient.from('customer_product_entitlements')
+    .select('*', { count: 'exact', head: true })
+    .gte('expires_at', now)
+    .lte('expires_at', thirtyDaysFromNow)
 
-    const { count: assignedCount } = await adminClient.from('crm_leads').select('*', { count: 'exact', head: true })
-      .eq('assigned_to', user.id)
-      .not('status', 'in', '("Closed/Lost","Converted")')
-    myAssignedCount = assignedCount || 0
-
-    // eslint-disable-next-line react-hooks/purity
-    const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
-    const { count: updatedCount } = await adminClient.from('crm_leads').select('*', { count: 'exact', head: true })
-      .gte('updated_at', oneWeekAgo)
-    recentUpdatesCount = updatedCount || 0
-  }
-
-  let activeStaffCount = 0
-  if (permittedLayout.includes('users')) {
-    const { count } = await adminClient.from('staff_profiles').select('*', { count: 'exact', head: true }).eq('status', 'active')
-    activeStaffCount = count || 0
-  }
-
-  let recentLogsCount = 0
-  if (permittedLayout.includes('audit')) {
-    // past 24 hours
-    // eslint-disable-next-line react-hooks/purity
-    const yesterday = new Date(Date.now() - 86400000).toISOString()
-    const { count } = await adminClient.from('audit_logs').select('*', { count: 'exact', head: true }).gte('created_at', yesterday)
-    recentLogsCount = count || 0
-  }
-
-  // Product Portfolio Counts
-  let totalProducts = 0
-  let activeProducts = 0
-  let devProducts = 0
-  let testProducts = 0
-  let pausedProducts = 0
-
-  if (permittedLayout.includes('products_portfolio')) {
-    const { count: total } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true })
-    totalProducts = total || 0
-
-    const { count: active } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true }).eq('lifecycle_status', 'Active')
-    activeProducts = active || 0
-
-    const { count: dev } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true }).eq('lifecycle_status', 'Development')
-    devProducts = dev || 0
-
-    const { count: test } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true }).in('lifecycle_status', ['Testing', 'Beta'])
-    testProducts = test || 0
-
-    const { count: paused } = await adminClient.from('cms_products').select('*', { count: 'exact', head: true }).eq('lifecycle_status', 'Paused')
-    pausedProducts = paused || 0
-  }
+  const pendingActionsCount = (newRequestsCount || 0) + (expiringSubscriptionsCount || 0)
 
   return (
     <div>
-      <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)', marginBottom: '2rem' }}>
-        Dashboard
-      </h1>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--lam-white)', marginBottom: '0.25rem' }}>
+          Executive Dashboard
+        </h1>
+        <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)' }}>
+          High-level operational metrics across client accounts, active subscriptions, and website CMS.
+        </p>
+      </div>
       
       <DashboardGrid 
         layout={permittedLayout} 
         data={{ 
-          newRequestsCount, myAssignedCount, recentUpdatesCount, activeStaffCount, recentLogsCount,
-          totalProducts, activeProducts, devProducts, testProducts, pausedProducts
+          totalClientsCount: totalClientsCount || 0,
+          activeSubscriptionsCount: activeSubscriptionsCount || 0,
+          totalProductsCount: totalProductsCount || 0,
+          newRequestsCount: newRequestsCount || 0,
+          expiringSubscriptionsCount: expiringSubscriptionsCount || 0,
+          pendingActionsCount
         }} 
       />
     </div>
