@@ -5,21 +5,25 @@ const KEY_ID = 'lam-id-key-rs256-2026'
 
 // RSA 2048 Keypair Manager (Private Key for signing, Public Key for verification & JWKS)
 let privateKeyPem = process.env.LAM_SSO_PRIVATE_KEY
-let publicKeyPem = process.env.LAM_SSO_PUBLIC_KEY
+let rsaPrivateKeyObj: crypto.KeyObject | null = null
 let rsaPublicKeyObj: crypto.KeyObject | null = null
 
-if (!privateKeyPem || !publicKeyPem) {
-  // Generate a secure persistent runtime RSA-2048 key pair if environment keys are not explicitly set
-  const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
-    modulusLength: 2048,
-    publicKeyEncoding: { type: 'spki', format: 'pem' },
-    privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
-  })
-  privateKeyPem = privateKey
-  publicKeyPem = publicKey
+if (privateKeyPem) {
+  // Normalize unescaped \n characters if passed as single-line string in environment
+  const normalizedPem = privateKeyPem.replace(/\\n/g, '\n').trim()
+  try {
+    rsaPrivateKeyObj = crypto.createPrivateKey(normalizedPem)
+    // Always derive public key directly from private key so signing and JWKS cannot mismatch
+    rsaPublicKeyObj = crypto.createPublicKey(rsaPrivateKeyObj)
+  } catch (err: any) {
+    console.error('[LAM ID SSO KEY ERROR] Failed to parse LAM_SSO_PRIVATE_KEY:', err.message)
+  }
 }
 
-rsaPublicKeyObj = crypto.createPublicKey(publicKeyPem)
+// Production Security Enforcement: FAIL CLOSED if persistent key is missing or invalid
+if (process.env.NODE_ENV === 'production' && (!rsaPrivateKeyObj || !rsaPublicKeyObj)) {
+  console.error('[LAM ID SSO FATAL] Persistent LAM_SSO_PRIVATE_KEY environment variable is missing or invalid in production. SSO token signing refused.')
+}
 
 export interface SsoTokenPayload {
   iss: string
@@ -62,6 +66,10 @@ export function signSsoJwt(
   payload: Omit<SsoTokenPayload, 'iss' | 'iat' | 'jti'>,
   expiresInSeconds: number = 3600
 ): string {
+  if (!rsaPrivateKeyObj) {
+    throw new Error('LAM ID SSO signing private key is missing or invalid. Token signing refused.')
+  }
+
   const header = {
     alg: 'RS256',
     typ: 'JWT',
@@ -83,7 +91,7 @@ export function signSsoJwt(
 
   const signer = crypto.createSign('RSA-SHA256')
   signer.update(signatureInput)
-  const signature = signer.sign(privateKeyPem!, 'base64')
+  const signature = signer.sign(rsaPrivateKeyObj, 'base64')
     .replace(/=/g, '')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
@@ -96,6 +104,10 @@ export function signSsoJwt(
  */
 export function verifySsoJwt(token: string): { valid: boolean; payload?: SsoTokenPayload; error?: string } {
   try {
+    if (!rsaPublicKeyObj) {
+      return { valid: false, error: 'LAM ID public key is missing or invalid.' }
+    }
+
     const parts = token.split('.')
     if (parts.length !== 3) {
       return { valid: false, error: 'Invalid token structure' }
@@ -113,7 +125,7 @@ export function verifySsoJwt(token: string): { valid: boolean; payload?: SsoToke
       base64Sig += '='
     }
 
-    const isValidSig = verifier.verify(publicKeyPem!, base64Sig, 'base64')
+    const isValidSig = verifier.verify(rsaPublicKeyObj, base64Sig, 'base64')
     if (!isValidSig) {
       return { valid: false, error: 'Invalid token signature (RS256 verification failed)' }
     }
@@ -139,7 +151,10 @@ export function verifySsoJwt(token: string): { valid: boolean; payload?: SsoToke
  * Generate a public JWKS object exposing public RSA keys only (No private or symmetric secrets).
  */
 export function getJwksKeys() {
-  const jwk = rsaPublicKeyObj!.export({ format: 'jwk' })
+  if (!rsaPublicKeyObj) {
+    throw new Error('LAM ID public key is missing or invalid.')
+  }
+  const jwk = rsaPublicKeyObj.export({ format: 'jwk' })
   return {
     keys: [
       {
