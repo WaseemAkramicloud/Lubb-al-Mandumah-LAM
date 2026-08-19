@@ -107,6 +107,7 @@ This section summarizes the **DEFINITIVE live architecture** as of **Stage 15 (2
 - **Stage 14 (Control Panel Structure, Client Management & CMS Refinement)**: **Completed & Verified** (2026-08-15)
 - **Stage 15 (Route Consolidation, Client Management & Legacy UI Stabilisation)**: **Completed & Verified** (2026-08-15)
 - **Stage B / Stage 19 (Central Identity & Control Plane Database Foundation)**: **Completed & Verified** (2026-08-19)
+- **Stage C / Stage 20 (Central Identity Engine & Dual Authentication Resolution)**: **Completed & Verified** (2026-08-19)
 
 ---
 
@@ -534,5 +535,39 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
     - Entry 2 (Employee Workspace Access): `Workspace Code` + `User ID` + `Password`.
   - Create server-side identity resolver function `resolveWorkspaceUserIdentity(workspaceCode, userId)` returning linked `LAM User UUID` and credentials context.
   - Perform Supabase Auth password verification against single central `auth.users` store without storing passwords in product DBs or exposing internal synthetic email details to users.
+
+---
+
+### Stage C: Central Identity Engine & Dual Authentication Resolution (2026-08-19)
+- **Status**: Completed & Verified.
+- **What was implemented**:
+  - **Dual Entry Authentication Resolution (`customerLogin`)**:
+    - **Company Owner Entry (`https://access.lubbalmandumah.com`)**: Authenticates via `Work Email` + `Password` against canonical Supabase Auth. Resolves Company Owner identity (`customer_identities.id`) across all authorized organizations and workspaces.
+    - **Employee Workspace Entry (`https://id.lubbalmandumah.com` or direct product)**: Authenticates via `Workspace Code` (`PPPXXXX`) + `User ID` + `Password`.
+  - **Server-Side Workspace Identity Resolver (`customerWorkspaceLogin`)**:
+    - Resolves `Workspace Code` → `lam_product_workspaces.id` and verifies `lam_products.identity_mode = 'lam_sso'`.
+    - Enforces requesting product match when login originates from specific product OIDC request (e.g. `AHS` workspace code submitted during NEXORA sign-in returns safe product mismatch error).
+    - Checks cascading suspension status (Customer Account active → Organization active → Product Workspace active → User Identity active).
+    - Resolves `Workspace Code` + `User ID` → `lam_workspace_memberships.customer_id` (`LAM User UUID`).
+  - **Independent Workspace Credential Accounts (`createWorkspaceEmployeeAccount`)**:
+    - Each workspace account receives its own independent `customer_identities.id` and `auth.users.id`.
+    - A physical person can hold multiple completely independent workspace accounts (e.g. `waseem.school` with Password A on AimHighSERP, and `waseem.marketing` with Password B on NEXORA). Passwords, sessions, and suspension statuses remain strictly independent per account.
+  - **Encapsulated Internal Auth Alias**:
+    - Uses deterministic internal alias `${user_id}.${workspace_code}@users.lam.internal` inside Supabase Auth.
+    - Alias is 100% encapsulated server-side and NEVER exposed to users in UI, API responses, profile screens, or logs.
+  - **Dual Login User Interface (`/id/login/page.tsx`)**:
+    - Implemented tabbed UI allowing users to toggle between Workspace Employee Login (`Workspace Code` + `User ID` + `Password`) and Company Owner Login (`Work Email` + `Password`).
+  - **Verification Testing (`scripts/test-stage-c-authentication.ts`)**:
+    - Verified all 8 required test scenarios:
+      1. Same physical human with 2 independent workspace accounts.
+      2. Verified distinct `customer_identities.id` and `auth_user_id` (zero improper merging).
+      3. Account 1 (`waseem.school`) login success.
+      4. Account 2 (`waseem.marketing`) login success.
+      5. Password independence (changing Password A did NOT affect Password B).
+      6. Suspension independence (suspending Account 1 did NOT suspend Account 2).
+      7. Product mismatch enforcement (mismatched code rejected cleanly).
+      8. Company Owner account isolation (email login verified independently).
+  - **Production Build Verification**: `npm run build` compiled 100% cleanly across all 101 routes with 0 errors.
+
 
 

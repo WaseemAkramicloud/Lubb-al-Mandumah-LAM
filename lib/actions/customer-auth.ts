@@ -8,14 +8,40 @@ import { revalidatePath } from 'next/cache'
 
 const SESSION_COOKIE_NAME = 'lam_customer_session'
 
-export async function customerLogin(formData: FormData) {
+export interface CustomerLoginResult {
+  success: boolean
+  error?: string
+  redirectUrl?: string
+  customerId?: string
+  requirePasswordChange?: boolean
+  workspaceId?: string
+  workspaceCode?: string
+  productSlug?: string
+}
+
+export async function customerLogin(formData: FormData): Promise<CustomerLoginResult> {
+  const mode = (formData.get('login_mode') as string) || 'employee'
+  const workspaceCode = (formData.get('workspace_code') as string)?.trim().toUpperCase()
+  const userId = (formData.get('user_id') as string)?.trim().toLowerCase()
   const email = (formData.get('email') as string)?.trim().toLowerCase()
   const password = formData.get('password') as string
   const returnTo = (formData.get('return_to') as string) || '/portal'
+  const requestingProduct = (formData.get('requesting_product') as string)?.trim().toLowerCase()
   const safeReturnTo = (returnTo.startsWith('/') && !returnTo.startsWith('//')) ? returnTo : '/portal'
 
+  // If workspace_code & user_id are supplied OR mode === 'employee', process workspace login
+  if (workspaceCode && userId) {
+    return customerWorkspaceLogin({
+      workspaceCode,
+      userId,
+      password,
+      safeReturnTo,
+      requestingProduct
+    })
+  }
+
   if (!email || !password) {
-    return { success: false, error: 'Email and password are required.' }
+    return { success: false, error: 'Email and password are required for Owner Sign In.' }
   }
 
   const authClient = getSupabaseAdmin()
@@ -36,11 +62,11 @@ export async function customerLogin(formData: FormData) {
       .ilike('email', email)
       .maybeSingle()
 
-    await logCustomerAudit(custAttempt?.id || null, null, 'login_failed_password', { email, authError: authErr?.message })
-    return { success: false, error: 'Invalid customer email or password.' }
+    await logCustomerAudit(custAttempt?.id || null, null, 'owner_login_failed_password', { email, authError: authErr?.message })
+    return { success: false, error: 'Invalid Owner email or password.' }
   }
 
-  // 2. Fetch linked customer identity profile (robust lookup with administrative service_role)
+  // 2. Fetch linked customer identity profile
   let { data: customer, error: profileErr } = await adminClient
     .from('customer_identities')
     .select('*')
@@ -58,21 +84,14 @@ export async function customerLogin(formData: FormData) {
     if (emailErr) profileErr = emailErr
   }
 
-  if (profileErr) {
-    console.error(`[LAM ID LOGIN DIAGNOSTIC] Profile query DB error for ${email} (auth_user_id: ${authUserId}):`, profileErr)
-    await logCustomerAudit(null, null, 'login_failed_db_error', { email, authUserId, errorCode: profileErr.code, errorMessage: profileErr.message })
-    return { success: false, error: 'Customer profile not found.' }
-  }
-
-  if (!customer) {
-    console.error(`[LAM ID LOGIN DIAGNOSTIC] Customer profile missing for ${email} (auth_user_id: ${authUserId})`)
-    await logCustomerAudit(null, null, 'login_failed_profile_missing', { email, authUserId })
-    return { success: false, error: 'Customer profile not found.' }
+  if (profileErr || !customer) {
+    await logCustomerAudit(null, null, 'owner_login_failed_profile_missing', { email, authUserId })
+    return { success: false, error: 'Customer Owner profile not found.' }
   }
 
   if (customer.status === 'suspended') {
-    await logCustomerAudit(customer.id, null, 'login_blocked_suspended', { email })
-    return { success: false, error: 'Account suspended. Please contact your organization administrator.' }
+    await logCustomerAudit(customer.id, null, 'owner_login_blocked_suspended', { email })
+    return { success: false, error: 'Owner Account is suspended. Please contact LAM Administration.' }
   }
 
   // Auto-stitch auth_user_id if unlinked
@@ -84,15 +103,17 @@ export async function customerLogin(formData: FormData) {
   const isMustChangePassword = customer.must_change_password === true || authData.user?.user_metadata?.must_change_password === true
 
   if (isMustChangePassword) {
-    const cookieStore = await cookies()
-    const pendingToken = crypto.randomUUID()
-    cookieStore.set('lam_pending_pwd_change', JSON.stringify({ authUserId, customerId: customer.id, returnTo: safeReturnTo, token: pendingToken }), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 600 // 10 minutes
-    })
+    try {
+      const cookieStore = await cookies()
+      const pendingToken = crypto.randomUUID()
+      cookieStore.set('lam_pending_pwd_change', JSON.stringify({ authUserId, customerId: customer.id, returnTo: safeReturnTo, token: pendingToken }), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 600
+      })
+    } catch {}
 
     await logCustomerAudit(customer.id, null, 'login_forced_password_change_required', { email })
 
@@ -118,18 +139,285 @@ export async function customerLogin(formData: FormData) {
     .update({ last_login_at: new Date().toISOString() })
     .eq('id', customer.id)
 
-  const cookieStore = await cookies()
-  cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 30 * 86400
-  })
+  try {
+    const cookieStore = await cookies()
+    cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 86400
+    })
+  } catch {}
 
-  await logCustomerAudit(customer.id, null, 'customer_login_success', { email })
+  await logCustomerAudit(customer.id, null, 'customer_owner_login_success', { email })
 
   return { success: true, redirectUrl: safeReturnTo, customerId: customer.id }
+}
+
+/**
+ * Perform workspace employee authentication via Workspace Code (PPPXXXX) + User ID + Password
+ */
+export async function customerWorkspaceLogin(params: {
+  workspaceCode: string
+  userId: string
+  password?: string
+  safeReturnTo?: string
+  requestingProduct?: string
+}): Promise<CustomerLoginResult> {
+  const { workspaceCode, userId, password, safeReturnTo = '/portal', requestingProduct } = params
+
+  if (!workspaceCode || !userId || !password) {
+    return { success: false, error: 'Workspace Code, User ID, and Password are required.' }
+  }
+
+  const supabase = getSupabaseAdmin()
+
+  // 1. Resolve Product Workspace
+  const { data: workspace, error: wsErr } = await supabase
+    .from('lam_product_workspaces')
+    .select('*, customer_account:lam_customer_accounts(*), organization:lam_organizations(*)')
+    .ilike('workspace_code', workspaceCode)
+    .maybeSingle()
+
+  if (wsErr || !workspace) {
+    return { success: false, error: `Workspace '${workspaceCode}' was not found.` }
+  }
+
+  if (workspace.status !== 'active') {
+    return { success: false, error: `Workspace '${workspaceCode}' is currently ${workspace.status}.` }
+  }
+
+  // 2. Check Product Identity Mode in Central Product Registry
+  const { data: productReg } = await supabase
+    .from('lam_products')
+    .select('identity_mode, name')
+    .eq('slug', workspace.product_slug)
+    .maybeSingle()
+
+  if (productReg?.identity_mode !== 'lam_sso') {
+    return { success: false, error: `Product '${productReg?.name || workspace.product_slug}' does not participate in central LAM SSO authentication.` }
+  }
+
+  // 3. Verify requesting product match (if login originated from specific product OIDC request)
+  if (requestingProduct && requestingProduct !== workspace.product_slug) {
+    return {
+      success: false,
+      error: `Workspace Code '${workspaceCode}' belongs to ${workspace.product_slug.toUpperCase()}, which cannot be used to log into ${requestingProduct.toUpperCase()}.`
+    }
+  }
+
+  // 4. Check cascading suspension status (Customer Account -> Organization)
+  if (workspace.customer_account?.status === 'suspended') {
+    return { success: false, error: 'Customer Account is suspended. Please contact LAM Administration.' }
+  }
+
+  if (workspace.organization?.status === 'suspended') {
+    return { success: false, error: 'Organization is suspended. Please contact your administrator.' }
+  }
+
+  // 5. Resolve Workspace Membership
+  const { data: membership, error: memErr } = await supabase
+    .from('lam_workspace_memberships')
+    .select('*, customer:customer_identities(*)')
+    .eq('workspace_id', workspace.id)
+    .ilike('user_id', userId)
+    .maybeSingle()
+
+  if (memErr || !membership) {
+    return { success: false, error: `Invalid User ID or password for workspace '${workspaceCode}'.` }
+  }
+
+  if (membership.status !== 'active') {
+    return { success: false, error: `Your account for workspace '${workspaceCode}' is ${membership.status}.` }
+  }
+
+  const customer = membership.customer as any
+  if (!customer || customer.status !== 'active') {
+    return { success: false, error: `Your account identity for workspace '${workspaceCode}' is inactive or suspended.` }
+  }
+
+  // 6. Determine Internal Auth Email Alias (Encapsulated)
+  const internalAuthEmail = customer.email || `${userId}.${workspaceCode}@users.lam.internal`
+
+  // 7. Validate Password against central Supabase Auth (auth.users)
+  const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+    email: internalAuthEmail,
+    password
+  })
+
+  if (authErr || !authData.user) {
+    await logCustomerAudit(customer.id, workspace.customer_account_id, 'workspace_login_failed_password', {
+      workspaceCode,
+      userId,
+      authError: authErr?.message
+    })
+    return { success: false, error: `Invalid User ID or password for workspace '${workspaceCode}'.` }
+  }
+
+  // Auto-stitch auth_user_id if unlinked
+  if (!customer.auth_user_id) {
+    await supabase.from('customer_identities').update({ auth_user_id: authData.user.id }).eq('id', customer.id)
+  }
+
+  // 8. Issue Active Customer Session
+  const sessionToken = 'csess_' + crypto.randomUUID().replace(/-/g, '')
+  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString()
+
+  await supabase.from('customer_sessions').insert({
+    customer_id: customer.id,
+    session_token: sessionToken,
+    expires_at: expiresAt,
+    is_active: true
+  })
+
+  await supabase
+    .from('customer_identities')
+    .update({ last_login_at: new Date().toISOString() })
+    .eq('id', customer.id)
+
+  try {
+    const cookieStore = await cookies()
+    cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 86400
+    })
+  } catch {}
+
+  await logCustomerAudit(customer.id, workspace.customer_account_id, 'workspace_login_success', {
+    workspaceCode,
+    userId,
+    productSlug: workspace.product_slug
+  })
+
+  return {
+    success: true,
+    redirectUrl: safeReturnTo,
+    customerId: customer.id,
+    workspaceId: workspace.id,
+    workspaceCode: workspace.workspace_code,
+    productSlug: workspace.product_slug
+  }
+}
+
+/**
+ * Create a new independent workspace employee account (Customer Identity + Auth user + Membership)
+ */
+export async function createWorkspaceEmployeeAccount(params: {
+  workspaceId: string
+  userId: string
+  password?: string
+  firstName: string
+  lastName?: string
+  workspaceRole?: string
+  contactEmail?: string
+}) {
+  const { workspaceId, userId, password, firstName, lastName, workspaceRole = 'member', contactEmail } = params
+
+  const supabase = getSupabaseAdmin()
+
+  // 1. Verify target workspace exists and product uses lam_sso
+  const { data: workspace, error: wsErr } = await supabase
+    .from('lam_product_workspaces')
+    .select('id, workspace_code, product_slug')
+    .eq('id', workspaceId)
+    .single()
+
+  if (wsErr || !workspace) {
+    return { success: false, error: 'Target product workspace not found.' }
+  }
+
+  const { data: prod } = await supabase.from('lam_products').select('identity_mode').eq('slug', workspace.product_slug).single()
+  if (prod?.identity_mode !== 'lam_sso') {
+    return { success: false, error: 'Workspace product does not participate in central LAM SSO.' }
+  }
+
+  // 2. Check user_id uniqueness within workspace scope
+  const cleanUserId = userId.trim().toLowerCase()
+  const { data: existingMem } = await supabase
+    .from('lam_workspace_memberships')
+    .select('id')
+    .eq('workspace_id', workspace.id)
+    .ilike('user_id', cleanUserId)
+    .maybeSingle()
+
+  if (existingMem) {
+    return { success: false, error: `User ID '${cleanUserId}' is already taken in workspace '${workspace.workspace_code}'.` }
+  }
+
+  // 3. Generate initial password if omitted
+  const initialPassword = password && password.length >= 8 ? password : `LAM-Init-${Math.floor(100000 + Math.random() * 900000)}!`
+
+  // 4. Generate internal auth email alias
+  const internalAuthEmail = `${cleanUserId}.${workspace.workspace_code.toLowerCase()}@users.lam.internal`
+
+  // 5. Create independent Auth user in auth.users
+  const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+    email: internalAuthEmail,
+    password: initialPassword,
+    email_confirm: true,
+    user_metadata: {
+      first_name: firstName,
+      last_name: lastName || '',
+      workspace_code: workspace.workspace_code,
+      user_id: cleanUserId,
+      role: 'workspace_employee'
+    }
+  })
+
+  if (authError || !authUser?.user) {
+    return { success: false, error: `Failed to create workspace Auth user: ${authError?.message}` }
+  }
+
+  const authUserId = authUser.user.id
+
+  // 6. Create independent linked customer_identities row
+  const { data: newCustomer, error: custError } = await supabase
+    .from('customer_identities')
+    .insert({
+      id: authUserId,
+      auth_user_id: authUserId,
+      email: contactEmail || internalAuthEmail,
+      first_name: firstName,
+      last_name: lastName || null,
+      status: 'active'
+    })
+    .select()
+    .single()
+
+  if (custError || !newCustomer) {
+    return { success: false, error: `Failed to create customer identity profile: ${custError?.message}` }
+  }
+
+  // 7. Create workspace membership
+  const { data: newMem, error: memError } = await supabase
+    .from('lam_workspace_memberships')
+    .insert({
+      workspace_id: workspace.id,
+      customer_id: newCustomer.id,
+      user_id: cleanUserId,
+      workspace_role: workspaceRole,
+      status: 'active'
+    })
+    .select()
+    .single()
+
+  if (memError || !newMem) {
+    return { success: false, error: `Failed to create workspace membership: ${memError?.message}` }
+  }
+
+  return {
+    success: true,
+    customerId: newCustomer.id,
+    authUserId,
+    membershipId: newMem.id,
+    workspaceCode: workspace.workspace_code,
+    userId: cleanUserId,
+    initialPassword
+  }
 }
 
 export async function completeFirstPasswordChange(formData: FormData) {
@@ -144,8 +432,11 @@ export async function completeFirstPasswordChange(formData: FormData) {
     return { success: false, error: 'Passwords do not match.' }
   }
 
-  const cookieStore = await cookies()
-  const pendingCookie = cookieStore.get('lam_pending_pwd_change')?.value
+  let pendingCookie: string | undefined
+  try {
+    const cookieStore = await cookies()
+    pendingCookie = cookieStore.get('lam_pending_pwd_change')?.value
+  } catch {}
 
   if (!pendingCookie) {
     return { success: false, error: 'Password change session expired or invalid. Please log in again.' }
@@ -182,16 +473,18 @@ export async function completeFirstPasswordChange(formData: FormData) {
       is_active: true
     })
 
-    cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 30 * 86400
-    })
+    try {
+      const cookieStore = await cookies()
+      cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 30 * 86400
+      })
 
-    // Clear pending password change cookie
-    cookieStore.delete('lam_pending_pwd_change')
+      cookieStore.delete('lam_pending_pwd_change')
+    } catch {}
 
     await logCustomerAudit(customerId, null, 'first_login_password_changed', {})
 
@@ -203,8 +496,11 @@ export async function completeFirstPasswordChange(formData: FormData) {
 }
 
 export async function getCurrentCustomer() {
-  const cookieStore = await cookies()
-  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
+  let sessionToken: string | undefined
+  try {
+    const cookieStore = await cookies()
+    sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
+  } catch {}
 
   if (!sessionToken) return null
 
@@ -216,7 +512,7 @@ export async function getCurrentCustomer() {
     .eq('session_token', sessionToken)
     .eq('is_active', true)
     .gt('expires_at', new Date().toISOString())
-    .single()
+    .maybeSingle()
 
   if (!session || !session.customer) return null
   if (session.customer.status === 'suspended') return null
@@ -225,8 +521,11 @@ export async function getCurrentCustomer() {
 }
 
 export async function customerLogout() {
-  const cookieStore = await cookies()
-  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
+  let sessionToken: string | undefined
+  try {
+    const cookieStore = await cookies()
+    sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
+  } catch {}
 
   if (sessionToken) {
     const supabase = getSupabaseAdmin()
@@ -236,9 +535,39 @@ export async function customerLogout() {
       .eq('session_token', sessionToken)
   }
 
-  cookieStore.delete(SESSION_COOKIE_NAME)
+  try {
+    const cookieStore = await cookies()
+    cookieStore.delete(SESSION_COOKIE_NAME)
+  } catch {}
+
   return { success: true }
 }
+
+export async function updateCustomerPassword(formData: FormData) {
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
+
+  const newPassword = formData.get('new_password') as string
+  if (!newPassword || newPassword.length < 8) {
+    return { success: false, error: 'Password must be at least 8 characters long.' }
+  }
+
+  const supabase = getSupabaseAdmin()
+
+  if (currentCustomer.auth_user_id) {
+    const { error: authErr } = await supabase.auth.admin.updateUserById(currentCustomer.auth_user_id, {
+      password: newPassword
+    })
+    if (authErr) return { success: false, error: authErr.message }
+  }
+
+  await logCustomerAudit(currentCustomer.id, null, 'customer_password_changed', {})
+  return { success: true }
+}
+
+// --------------------------------------------------------------------------
+// PORTAL & TEAM HELPER ACTIONS (PRESERVED FOR COMPATIBILITY)
+// --------------------------------------------------------------------------
 
 export async function customerRegister(formData: FormData) {
   const email = (formData.get('email') as string)?.trim().toLowerCase()
@@ -253,7 +582,6 @@ export async function customerRegister(formData: FormData) {
 
   const supabase = getSupabaseAdmin()
 
-  // 1. Check existing customer identity
   const { data: existing } = await supabase
     .from('customer_identities')
     .select('id')
@@ -264,7 +592,6 @@ export async function customerRegister(formData: FormData) {
     return { success: false, error: 'An account with this email already exists.' }
   }
 
-  // 2. Create canonical Auth user in auth.users
   const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
     email,
     password,
@@ -282,7 +609,6 @@ export async function customerRegister(formData: FormData) {
 
   const authUserId = authUser.user.id
 
-  // 3. Create linked customer_identities record
   const { data: newCustomer, error: custError } = await supabase
     .from('customer_identities')
     .insert({
@@ -300,7 +626,6 @@ export async function customerRegister(formData: FormData) {
     return { success: false, error: `Failed to create customer profile: ${custError?.message}` }
   }
 
-  // 4. Create new customer CRM Company
   const companyIdStr = `COMP-${Math.floor(10000 + Math.random() * 90000)}`
   const { data: company, error: compError } = await supabase
     .from('crm_companies')
@@ -318,7 +643,6 @@ export async function customerRegister(formData: FormData) {
     return { success: false, error: `Failed to create company: ${compError?.message}` }
   }
 
-  // 5. Create Owner membership
   await supabase.from('customer_company_memberships').insert({
     customer_id: newCustomer.id,
     company_id: company.id,
@@ -326,43 +650,6 @@ export async function customerRegister(formData: FormData) {
     status: 'active'
   })
 
-  // 6. Grant default starter entitlements (NEXORA & ATOM)
-  await supabase.from('customer_product_entitlements').insert([
-    {
-      company_id: company.id,
-      product_slug: 'nexora',
-      plan_tier: 'starter',
-      max_seats: 5,
-      status: 'active'
-    },
-    {
-      company_id: company.id,
-      product_slug: 'atom',
-      plan_tier: 'starter',
-      max_seats: 5,
-      status: 'active'
-    }
-  ])
-
-  // 7. Explicit User Product Access Grant
-  await supabase.from('customer_product_access').insert([
-    {
-      customer_id: newCustomer.id,
-      company_id: company.id,
-      product_slug: 'nexora',
-      status: 'active',
-      granted_by: newCustomer.id
-    },
-    {
-      customer_id: newCustomer.id,
-      company_id: company.id,
-      product_slug: 'atom',
-      status: 'active',
-      granted_by: newCustomer.id
-    }
-  ])
-
-  // 8. Automatically log in new customer
   const sessionToken = 'csess_' + crypto.randomUUID().replace(/-/g, '')
   const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString()
 
@@ -373,14 +660,16 @@ export async function customerRegister(formData: FormData) {
     is_active: true
   })
 
-  const cookieStore = await cookies()
-  cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 30 * 86400
-  })
+  try {
+    const cookieStore = await cookies()
+    cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 86400
+    })
+  } catch {}
 
   await logCustomerAudit(newCustomer.id, company.id, 'customer_registered', { email, companyName })
 
@@ -564,28 +853,6 @@ export async function updateCustomerProfile(formData: FormData) {
 
   await logCustomerAudit(currentCustomer.id, null, 'customer_profile_updated', { firstName, lastName })
   revalidatePath('/portal/profile')
-  return { success: true }
-}
-
-export async function updateCustomerPassword(formData: FormData) {
-  const currentCustomer = await getCurrentCustomer()
-  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
-
-  const newPassword = formData.get('new_password') as string
-  if (!newPassword || newPassword.length < 8) {
-    return { success: false, error: 'Password must be at least 8 characters long.' }
-  }
-
-  const supabase = getSupabaseAdmin()
-
-  if (currentCustomer.auth_user_id) {
-    const { error: authErr } = await supabase.auth.admin.updateUserById(currentCustomer.auth_user_id, {
-      password: newPassword
-    })
-    if (authErr) return { success: false, error: authErr.message }
-  }
-
-  await logCustomerAudit(currentCustomer.id, null, 'customer_password_changed', {})
   return { success: true }
 }
 
