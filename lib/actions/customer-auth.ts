@@ -67,8 +67,11 @@ export async function customerLogin(formDataInput: FormData | Record<string, any
   const safeReturnTo = await getSafeReturnUrl(returnTo)
   const requestingProduct = getValue('requesting_product', 'requestingProduct')?.trim().toLowerCase()
 
-  // If workspace_code & user_id are supplied OR mode === 'employee', process workspace login
-  if (workspaceCode && userId) {
+  // Process mode-specific login requirements
+  if (mode === 'employee' || (workspaceCode && userId)) {
+    if (!workspaceCode || !userId || !password) {
+      return { success: false, error: 'Workspace Code, User ID, and Password are required for Workspace Login.' }
+    }
     return customerWorkspaceLogin({
       workspaceCode,
       userId,

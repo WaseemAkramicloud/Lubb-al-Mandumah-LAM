@@ -746,3 +746,9 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
      - Updated `app/portal/layout.tsx` to redirect unauthenticated visitors across hosts to `https://id.lubbalmandumah.com/id/login?redirect_to=https://access.lubbalmandumah.com/portal`.
      - Updated `customer-auth.ts` cookie domain (`.lubbalmandumah.com` in production) and `getSafeReturnUrl` to preserve absolute return URLs (`https://access.lubbalmandumah.com/portal`).
      - Eliminates redirect loops and ensures login returns to `access.lubbalmandumah.com/portal` exactly once.
+  15. **Workspace Employee Login Submission & OIDC Redirect Preservation**:
+     - Captured form element synchronously in `app/id/login/page.tsx` before async state updates to prevent DOM extraction resets on Safari.
+     - Added explicit hidden inputs (`return_to`, `login_mode`, `requesting_product`) inside the form.
+     - Kept loading state active during redirect navigation so Safari users visually see active progress instead of premature button reset.
+     - Enhanced `customerLogin` in `lib/actions/customer-auth.ts` to return clear error messages (`Workspace Code, User ID, and Password are required`) if fields are missing in employee mode.
+     - Preserves full OIDC authorization return URL (`/api/sso/authorize?client_id=lam_app_nexora...`), resuming the NEXORA OIDC transaction and redirecting back to `https://nexora.lubbalmandumah.com/api/auth/callback`.

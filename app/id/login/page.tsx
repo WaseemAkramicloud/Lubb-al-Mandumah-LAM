@@ -17,31 +17,35 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    // Capture form element synchronously before async state updates
+    const formElement = e.currentTarget
     setLoading(true)
     setError('')
 
     try {
-      const formData = new FormData(e.currentTarget)
-      formData.append('return_to', redirectTo)
-      formData.append('login_mode', loginMode)
+      const formData = new FormData(formElement)
+      formData.set('return_to', redirectTo)
+      formData.set('login_mode', loginMode)
       if (requestingProduct) {
-        formData.append('requesting_product', requestingProduct)
+        formData.set('requesting_product', requestingProduct)
       }
 
       const res = await customerLogin(formData)
 
       if (res.success) {
         if (res.redirectUrl) {
-          window.location.href = res.redirectUrl
+          const targetUrl = res.redirectUrl.startsWith('/') ? window.location.origin + res.redirectUrl : res.redirectUrl
+          window.location.href = targetUrl
         } else {
           router.push('/portal')
         }
+        // Keep loading=true during redirect navigation
       } else {
         setError(res.error || 'Authentication failed.')
+        setLoading(false)
       }
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.')
-    } finally {
       setLoading(false)
     }
   }
@@ -147,6 +151,10 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <input type="hidden" name="return_to" value={redirectTo} />
+          <input type="hidden" name="login_mode" value={loginMode} />
+          {requestingProduct && <input type="hidden" name="requesting_product" value={requestingProduct} />}
+
           {loginMode === 'employee' ? (
             <>
               <div className="form-group">
