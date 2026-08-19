@@ -124,7 +124,12 @@ This section summarizes the **DEFINITIVE live architecture** as of **Stage G (20
 - **Stage C / Stage 20 (Central Identity Engine & Dual Authentication Resolution)**: **Completed & Verified** (2026-08-19)
 - **Stage D / Stage 21 (LAM Access Web Hub, Owner Console & Strict Access Isolation)**: **Completed & Verified** (2026-08-19)
 - **Stage E / Stage 22 (Product Identity Contract, Token Claims & Multi-Client OIDC)**: **Completed & Verified** (2026-08-19)
-- **Stage F / Stage 23 (Full Control Plane & End-to-End SSO Verification)**: **Completed & Verified** (2026-08-19)
+- **Stage F / Stage 23 (Control Panel Client Onboarding & Credentials Management)**: **Completed & Verified** (2026-08-19)
+- **Stage G / Stage 24 (Real-Domain End-to-End Acceptance & Operational Sign-Off)**:
+  - **AUTOMATED STAGE G ACCEPTANCE**: PASSED
+  - **SYNTHETIC DATA CLEANUP**: PASSED
+  - **PRODUCTION BUILD**: PASSED
+  - **FINAL SAFARI VISUAL/INTERACTIVE ACCEPTANCE**: PENDING MANUAL USER VERIFICATION
 
 ---
 
@@ -698,7 +703,11 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
      - `npm run build` compiled 100% cleanly across all 102 production routes with 0 errors.
 
 ### Stage G: Real-Domain End-to-End Acceptance & Operational Sign-Off (2026-08-19)
-- **Status**: Completed & Verified.
+- **Status**:
+  - **AUTOMATED STAGE G ACCEPTANCE**: PASSED
+  - **SYNTHETIC DATA CLEANUP**: PASSED
+  - **PRODUCTION BUILD**: PASSED
+  - **FINAL SAFARI VISUAL/INTERACTIVE ACCEPTANCE**: PENDING MANUAL USER VERIFICATION
 - **What was implemented & verified**:
   1. **Real Staff Control Panel Onboarding Verification (Item 1)**:
      - Verified `/control-panel/clients/new` and `onboardCustomerCompanyAction` creating full hierarchy (`LAM-CA-...`, `LAM-ORG-...`, `PPPXXXX`, Owner, entitlements, memberships, tenant provisioning).
