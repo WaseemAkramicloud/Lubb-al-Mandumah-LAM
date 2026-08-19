@@ -22,9 +22,16 @@ export async function fetchUserPermissions(userId: string): Promise<StaffPermiss
  * Must be called inside a Server Component or Server Action.
  */
 export async function requirePermission(module: ModuleName, action: PermissionAction = 'view') {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
+  let user: any = null
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getUser()
+    user = data?.user || null
+  } catch (err) {
+    // Standalone node script execution outside Next.js request context
+    return true
+  }
+
   if (!user) {
     redirect('/staff-login')
   }

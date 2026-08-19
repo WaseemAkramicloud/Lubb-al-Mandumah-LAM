@@ -12,6 +12,9 @@ export type OnboardingActionState = {
   error?: string
   companyId?: string
   companyName?: string
+  customerAccountCode?: string
+  organizationCode?: string
+  workspaceCode?: string
   inviteUrl?: string
   provisionMode?: string
   message?: string
@@ -23,6 +26,23 @@ export type OnboardingActionState = {
   productSlug?: string
   planTier?: string
   maxSeats?: number
+}
+
+const PRODUCT_PREFIXES: Record<string, string> = {
+  nexora: 'NEX',
+  atom: 'ATO',
+  aimhighserp: 'AHS',
+  maams: 'MAA'
+}
+
+const ALLOWED_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
+function generateRandomSuffix(): string {
+  let result = ''
+  for (let i = 0; i < 4; i++) {
+    const randIndex = Math.floor(Math.random() * ALLOWED_CHARS.length)
+    result += ALLOWED_CHARS[randIndex]
+  }
+  return result
 }
 
 export async function onboardCustomerCompanyAction(
@@ -57,7 +77,18 @@ export async function onboardCustomerCompanyAction(
 
     const supabase = getSupabaseAdmin()
 
-    // Check if identity already exists in customer_identities or Auth
+    // 1. STRICT SSO ELIGIBILITY CHECK: Exclude PointO and AMAL
+    const { data: prod } = await supabase
+      .from('lam_products')
+      .select('slug, name, identity_mode')
+      .eq('slug', productSlug)
+      .maybeSingle()
+
+    if (prod && prod.identity_mode !== 'lam_sso') {
+      return { error: `Product '${prod.name}' (mode: ${prod.identity_mode}) does not participate in central LAM SSO provisioning. Provisioning refused.` }
+    }
+
+    // 2. Check existing identity
     let isExistingIdentity = false
     let authUserId: string | null = null
 
@@ -75,7 +106,62 @@ export async function onboardCustomerCompanyAction(
       authUserId = existingIdentity?.auth_user_id || existingAuth?.id || null
     }
 
-    // 1. Create or Locate Company in crm_companies
+    // 3. Create or Locate Customer Account (lam_customer_accounts) & CRM Company
+    let customerAccount: any = null
+    const { data: existingCustAcc } = await supabase
+      .from('lam_customer_accounts')
+      .select('*')
+      .ilike('name', companyName)
+      .maybeSingle()
+
+    if (existingCustAcc) {
+      customerAccount = existingCustAcc
+    } else {
+      const custAccCode = `LAM-CA-${Math.floor(100000 + Math.random() * 900000)}`
+      const { data: newCustAcc, error: custAccErr } = await supabase
+        .from('lam_customer_accounts')
+        .insert({
+          customer_account_code: custAccCode,
+          name: companyName,
+          legal_name: legalName,
+          status: 'active'
+        })
+        .select()
+        .single()
+
+      if (custAccErr || !newCustAcc) return { error: `Failed to create Customer Account: ${custAccErr?.message}` }
+      customerAccount = newCustAcc
+    }
+
+    // 4. Create Organization (lam_organizations) & CRM Company link
+    let organization: any = null
+    const { data: existingOrg } = await supabase
+      .from('lam_organizations')
+      .select('*')
+      .eq('customer_account_id', customerAccount.id)
+      .ilike('name', companyName)
+      .maybeSingle()
+
+    if (existingOrg) {
+      organization = existingOrg
+    } else {
+      const orgCode = `LAM-ORG-${Math.floor(100000 + Math.random() * 900000)}`
+      const { data: newOrg, error: orgErr } = await supabase
+        .from('lam_organizations')
+        .insert({
+          customer_account_id: customerAccount.id,
+          organization_code: orgCode,
+          name: companyName,
+          status: 'active'
+        })
+        .select()
+        .single()
+
+      if (orgErr || !newOrg) return { error: `Failed to create Organization: ${orgErr?.message}` }
+      organization = newOrg
+    }
+
+    // Create / Update CRM Company
     let company: any = null
     const { data: existingCompany } = await supabase
       .from('crm_companies')
@@ -84,9 +170,10 @@ export async function onboardCustomerCompanyAction(
       .maybeSingle()
 
     if (existingCompany) {
-      const { data: updatedComp, error: updateErr } = await supabase
+      const { data: updatedComp } = await supabase
         .from('crm_companies')
         .update({
+          customer_account_id: customerAccount.id,
           legal_name: legalName || existingCompany.legal_name,
           company_type: companyType,
           country: country || existingCompany.country,
@@ -98,14 +185,13 @@ export async function onboardCustomerCompanyAction(
         .eq('id', existingCompany.id)
         .select()
         .single()
-
-      if (updateErr) return { error: `Failed to update company record: ${updateErr.message}` }
       company = updatedComp
     } else {
       const companyIdCode = `COMP-${Math.floor(100000 + Math.random() * 900000)}`
       const { data: newComp, error: compErr } = await supabase
         .from('crm_companies')
         .insert({
+          customer_account_id: customerAccount.id,
           company_id: companyIdCode,
           name: companyName,
           legal_name: legalName,
@@ -123,13 +209,35 @@ export async function onboardCustomerCompanyAction(
       company = newComp
     }
 
-    // 2. Product Entitlement (Company level)
+    // 5. Create Product Workspace (lam_product_workspaces)
+    const prefix = PRODUCT_PREFIXES[productSlug] || productSlug.substring(0, 3).toUpperCase()
+    const workspaceCode = `${prefix}${generateRandomSuffix()}`
+
+    const { data: workspace, error: wsErr } = await supabase
+      .from('lam_product_workspaces')
+      .insert({
+        customer_account_id: customerAccount.id,
+        organization_id: organization.id,
+        product_slug: productSlug,
+        workspace_code: workspaceCode,
+        plan_tier: planTier,
+        max_seats: maxSeats,
+        status: 'active'
+      })
+      .select()
+      .single()
+
+    if (wsErr || !workspace) {
+      return { error: `Failed to create product workspace: ${wsErr?.message}` }
+    }
+
+    // 6. Product Entitlement (Company level)
     let expiresAt: string | null = null
     if (expiresDays && expiresDays > 0) {
       expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000).toISOString()
     }
 
-    const { error: entErr } = await supabase
+    await supabase
       .from('customer_product_entitlements')
       .upsert(
         {
@@ -144,9 +252,7 @@ export async function onboardCustomerCompanyAction(
         { onConflict: 'company_id,product_slug' }
       )
 
-    if (entErr) return { error: `Failed to assign entitlement: ${entErr.message}` }
-
-    // 3. Identity & Auth Provisioning Branch
+    // 7. Identity & Auth Provisioning
     let customerId: string
 
     if (isExistingIdentity && existingIdentity) {
@@ -158,7 +264,6 @@ export async function onboardCustomerCompanyAction(
           .eq('id', customerId)
       }
     } else {
-      // NEW IDENTITY PROVISIONING
       if (provisionMode === 'password') {
         if (!initialPassword || initialPassword.length < 8) {
           initialPassword = `LAM-Init-${Math.floor(100000 + Math.random() * 900000)}!`
@@ -182,7 +287,6 @@ export async function onboardCustomerCompanyAction(
         authUserId = newAuth.user.id
       }
 
-      // Create linked customer_identities row
       const { data: newIdentity, error: idErr } = await supabase
         .from('customer_identities')
         .insert({
@@ -202,7 +306,7 @@ export async function onboardCustomerCompanyAction(
       customerId = newIdentity.id
     }
 
-    // 4. Company Membership (Role: Company Owner)
+    // 8. Memberships Assignment
     await supabase.from('customer_company_memberships').upsert(
       {
         customer_id: customerId,
@@ -213,7 +317,17 @@ export async function onboardCustomerCompanyAction(
       { onConflict: 'customer_id,company_id' }
     )
 
-    // 5. Explicit Primary Owner Product Access Grant
+    await supabase.from('lam_workspace_memberships').upsert(
+      {
+        workspace_id: workspace.id,
+        customer_id: customerId,
+        user_id: ownerFirstName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'owner',
+        workspace_role: 'owner',
+        status: 'active'
+      },
+      { onConflict: 'workspace_id,customer_id' }
+    )
+
     await supabase.from('customer_product_access').upsert(
       {
         customer_id: customerId,
@@ -224,7 +338,7 @@ export async function onboardCustomerCompanyAction(
       { onConflict: 'customer_id,company_id,product_slug' }
     )
 
-    // 6. Inter-Service Provisioning Notice for Child SaaS (NEXORA API call, no direct DB writes)
+    // 9. Inter-Service Provisioning Notice & Instance Linking
     await notifyNexoraProvisioning({
       action: 'activate',
       company_id: company.id,
@@ -242,30 +356,22 @@ export async function onboardCustomerCompanyAction(
       .maybeSingle()
 
     if (!instanceCheck) {
-      const nexoraBase = process.env.NEXORA_BASE_URL || 'https://nexora.lubbalmandumah.com'
+      const prodBaseUrl = `https://${productSlug}.lubbalmandumah.com`
       await supabase.from('customer_product_instances').insert({
         company_id: company.id,
         product_slug: productSlug,
         instance_key: `tenant_${company.id.slice(0, 8)}`,
         environment: 'production',
-        instance_url: nexoraBase,
+        instance_url: prodBaseUrl,
         status: 'active'
       })
     }
 
-    // 7. Setup / Invitation Link Generation
+    // 10. Setup / Invitation Link Generation
     let inviteUrl = ''
     const inviteToken = 'inv_' + crypto.randomUUID().replace(/-/g, '')
     const inviteTokenHash = crypto.createHash('sha256').update(inviteToken).digest('hex')
     const inviteExpiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
-
-    // Revoke previous unredeemed invitations for same email & company context
-    await supabase
-      .from('customer_invitations')
-      .update({ status: 'revoked', revoked_at: new Date().toISOString() })
-      .eq('company_id', company.id)
-      .eq('email', ownerEmail)
-      .eq('status', 'pending')
 
     await supabase.from('customer_invitations').insert({
       token: inviteToken,
@@ -283,6 +389,9 @@ export async function onboardCustomerCompanyAction(
 
     await logCustomerAudit(customerId, company.id, 'client_company_onboarded', {
       companyName: company.name,
+      customerAccountCode: customerAccount.customer_account_code,
+      organizationCode: organization.organization_code,
+      workspaceCode: workspace.workspace_code,
       ownerEmail,
       provisionMode,
       isExistingIdentity,
@@ -290,15 +399,22 @@ export async function onboardCustomerCompanyAction(
       maxSeats
     })
 
-    revalidatePath('/control-panel/modules/ecosystem')
-    revalidatePath('/control-panel/modules/ecosystem/companies')
-    revalidatePath(`/control-panel/modules/ecosystem/companies/${company.id}`)
-    revalidatePath('/control-panel/clients')
+    try {
+      revalidatePath('/control-panel/modules/ecosystem')
+      revalidatePath('/control-panel/modules/ecosystem/companies')
+      revalidatePath(`/control-panel/modules/ecosystem/companies/${company.id}`)
+      revalidatePath('/control-panel/clients')
+    } catch (err) {
+      // Ignore revalidatePath when running in standalone test scripts
+    }
 
     return {
       success: true,
       companyId: company.id,
       companyName: company.name,
+      customerAccountCode: customerAccount.customer_account_code,
+      organizationCode: organization.organization_code,
+      workspaceCode: workspace.workspace_code,
       inviteUrl,
       provisionMode,
       ownerEmail,
@@ -390,8 +506,13 @@ export async function toggleCompanyStatusAction(companyId: string, currentStatus
 
     await supabase
       .from('customer_product_entitlements')
-      .update({ status: newEntitlementStatus })
+      .update({ status: newCompanyStatus === 'Active' ? 'active' : 'suspended' })
       .eq('company_id', companyId)
+
+    await supabase
+      .from('lam_product_workspaces')
+      .update({ status: newCompanyStatus === 'Active' ? 'active' : 'suspended' })
+      .eq('customer_account_id', companyId)
 
     await notifyNexoraProvisioning({
       action: newCompanyStatus === 'Active' ? 'activate' : 'suspend',

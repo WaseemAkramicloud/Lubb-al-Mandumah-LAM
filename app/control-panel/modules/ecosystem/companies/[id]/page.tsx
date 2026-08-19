@@ -23,7 +23,7 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
   const targetId = resolvedParams.id
   const adminClient = getSupabaseAdmin()
 
-  // 1. Fetch Company Record (supports lookup by UUID PK or string company_id code)
+  // 1. Fetch Company Record
   let { data: company } = await adminClient
     .from('crm_companies')
     .select(`
@@ -50,7 +50,38 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
     notFound()
   }
 
-  // 2. Fetch Memberships & Linked Customer Identities
+  // 2. Fetch Customer Account & Organizations
+  const { data: customerAccount } = await adminClient
+    .from('lam_customer_accounts')
+    .select('*')
+    .ilike('name', company.name)
+    .maybeSingle()
+
+  const { data: organizations } = await adminClient
+    .from('lam_organizations')
+    .select('*')
+    .eq('customer_account_id', customerAccount?.id || company.id)
+
+  // 3. Fetch Product Workspaces
+  const { data: workspaces } = await adminClient
+    .from('lam_product_workspaces')
+    .select('*, organization:lam_organizations(id, organization_code, name)')
+    .eq('customer_account_id', customerAccount?.id || company.id)
+
+  // Calculate active seats per workspace
+  const workspaceSeatCounts: Record<string, number> = {}
+  if (workspaces && workspaces.length > 0) {
+    for (const ws of workspaces) {
+      const { count } = await adminClient
+        .from('lam_workspace_memberships')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', ws.id)
+        .eq('status', 'active')
+      workspaceSeatCounts[ws.id] = count || 0
+    }
+  }
+
+  // 4. Fetch Memberships & Linked Customer Identities
   const { data: memberships } = await adminClient
     .from('customer_company_memberships')
     .select(`
@@ -62,33 +93,23 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
 
   // Identify Primary Owner
   const ownerMembership = memberships?.find(m => m.company_role === 'owner') || memberships?.[0]
-  const primaryOwner = ownerMembership?.identity
+  const primaryOwner: any = Array.isArray(ownerMembership?.identity) ? ownerMembership.identity[0] : ownerMembership?.identity
 
-  // 3. Fetch Product Entitlements (Company-Level Subscriptions)
+  // 5. Fetch Product Entitlements (Company-Level Subscriptions)
   const { data: entitlements } = await adminClient
     .from('customer_product_entitlements')
     .select('*')
     .eq('company_id', company.id)
     .order('created_at', { ascending: true })
 
-  // 4. Fetch Tenant Product Instances (e.g. NEXORA tenant workspace reference)
+  // 6. Fetch Tenant Product Instances
   const { data: instances } = await adminClient
     .from('customer_product_instances')
     .select('*')
     .eq('company_id', company.id)
     .order('created_at', { ascending: true })
 
-  // 5. Fetch Explicit User Product Access Grants
-  const { data: productAccess } = await adminClient
-    .from('customer_product_access')
-    .select(`
-      id, product_slug, status, created_at, updated_at,
-      customer:customer_identities (id, first_name, last_name, email)
-    `)
-    .eq('company_id', company.id)
-    .order('created_at', { ascending: true })
-
-  // 6. Fetch Account Audit Trail
+  // 7. Fetch Account Audit Trail
   const { data: auditLogs } = await adminClient
     .from('customer_audit_logs')
     .select('*')
@@ -96,14 +117,11 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
     .order('created_at', { ascending: false })
     .limit(15)
 
-  // 7. Fetch Staff Profiles for Staff Assignment in Edit Modal
+  // 8. Fetch Staff Profiles for Staff Assignment
   const { data: staffProfiles } = await adminClient
     .from('staff_profiles')
     .select('id, first_name, last_name, staff_id')
     .order('first_name', { ascending: true })
-
-  const ownerMem = (memberships || []).find((m: any) => m.company_role === 'owner')
-  const ownerIdentity = ownerMem ? (ownerMem.identity as any) : null
 
   const isDemo = company.company_type === 'demo'
   const isSuspended = company.status === 'Suspended' || company.status === 'Inactive'
@@ -136,7 +154,7 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
           </div>
 
           <div style={{ display: 'flex', gap: '1.5rem', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>
-            <span>Company Code: <strong style={{ color: 'var(--lam-gold)', fontFamily: 'monospace' }}>{company.company_id || company.id.slice(0, 8)}</strong></span>
+            <span>Customer Account Code: <strong style={{ color: 'var(--lam-gold)', fontFamily: 'monospace' }}>{customerAccount?.customer_account_code || company.company_id || company.id.slice(0, 8)}</strong></span>
             <span>Created: {new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium' }).format(new Date(company.created_at))}</span>
           </div>
         </div>
@@ -176,22 +194,72 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
               company_id: company.company_id,
               status: company.status
             }}
-            primaryOwnerName={ownerIdentity ? `${ownerIdentity.first_name || ''} ${ownerIdentity.last_name || ''}`.trim() : 'Not set'}
-            primaryOwnerEmail={ownerIdentity?.email || company.email || 'Not set'}
+            primaryOwnerName={primaryOwner ? `${primaryOwner.first_name || ''} ${primaryOwner.last_name || ''}`.trim() : 'Not set'}
+            primaryOwnerEmail={primaryOwner?.email || company.email || 'Not set'}
             subscribedProducts={(entitlements || []).map((e: any) => e.product_slug)}
             userCount={memberships?.length || 1}
             tenantCount={instances?.length || 1}
           />
 
-          {/* 1. Company Overview Card */}
+          {/* 1. Product Workspaces Card (Stage B Hierarchy Display) */}
           <div className="lam-card" style={{ marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-gold)', marginBottom: '1.25rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
-              🏢 Company Overview
+              ⚡ Subscribed Product Workspaces ({workspaces?.length || 0})
+            </h2>
+
+            {workspaces && workspaces.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {workspaces.map((ws: any) => {
+                  const activeSeats = workspaceSeatCounts[ws.id] || 0
+                  return (
+                    <div key={ws.id} style={{ background: 'var(--lam-surface)', padding: '1rem', borderRadius: '6px', border: '1px solid var(--lam-border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--lam-white)', fontSize: 'var(--text-sm)' }}>
+                            {ws.product_slug.toUpperCase()} Workspace
+                          </span>
+                          <span style={{ fontFamily: 'monospace', color: 'var(--lam-gold)', background: 'black', padding: '0.15rem 0.5rem', borderRadius: '3px', fontSize: 'var(--text-xs)' }}>
+                            {ws.workspace_code}
+                          </span>
+                        </div>
+                        <span style={{
+                          padding: '0.15rem 0.4rem',
+                          borderRadius: '3px',
+                          fontSize: '9px',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          background: ws.status === 'active' ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
+                          color: ws.status === 'active' ? '#2ecc71' : '#e74c3c'
+                        }}>
+                          {ws.status}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', fontSize: 'var(--text-xs)', color: 'var(--lam-silver-light)', marginTop: '0.5rem' }}>
+                        <div>Organization: <strong>{ws.organization?.name || '-'}</strong></div>
+                        <div>Plan Tier: <strong style={{ color: 'var(--lam-gold)', textTransform: 'capitalize' }}>{ws.plan_tier}</strong></div>
+                        <div>Active Seats: <strong style={{ color: 'var(--lam-white)' }}>{activeSeats} / {ws.max_seats} Seats</strong></div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>
+                No product workspaces provisioned yet.
+              </div>
+            )}
+          </div>
+
+          {/* 2. Company Overview Card */}
+          <div className="lam-card" style={{ marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-gold)', marginBottom: '1.25rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
+              🏢 Company Profile Overview
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem' }}>
               <div style={infoItemStyle}>
-                <div style={labelStyle}>Display Name</div>
+                <div style={labelStyle}>Client Name</div>
                 <div style={valueStyle}>{company.name}</div>
               </div>
 
@@ -213,22 +281,6 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
               </div>
 
               <div style={infoItemStyle}>
-                <div style={labelStyle}>Main Phone</div>
-                <div style={valueStyle}>{company.phone || '-'}</div>
-              </div>
-
-              <div style={infoItemStyle}>
-                <div style={labelStyle}>Website URL</div>
-                <div style={valueStyle}>
-                  {company.website ? (
-                    <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--lam-gold)', textDecoration: 'none' }}>
-                      {company.website}
-                    </a>
-                  ) : '-'}
-                </div>
-              </div>
-
-              <div style={infoItemStyle}>
                 <div style={labelStyle}>Location</div>
                 <div style={valueStyle}>{[company.city, company.country].filter(Boolean).join(', ') || '-'}</div>
               </div>
@@ -239,32 +291,15 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
                   {company.assigned ? `${(company.assigned as any).first_name} ${(company.assigned as any).last_name}` : 'Unassigned'}
                 </div>
               </div>
-
-              <div style={infoItemStyle}>
-                <div style={labelStyle}>Account Source</div>
-                <div style={valueStyle}>{company.source || 'Staff Controlled Onboarding'}</div>
-              </div>
             </div>
-
-            {company.notes && (
-              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--lam-border)' }}>
-                <div style={labelStyle}>Internal Administrative Notes</div>
-                <div style={{ background: 'var(--lam-surface)', padding: '1rem', borderRadius: '4px', color: 'var(--lam-silver-light)', whiteSpace: 'pre-wrap', fontSize: 'var(--text-xs)', lineHeight: 1.6 }}>
-                  {company.notes}
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* 2. Primary Owner & Company Members Card */}
-          <div className="lam-card" style={{ marginBottom: '1.5rem' }}>
+          {/* 3. Company Owner & Account Members */}
+          <div className="lam-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
-              <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-white)' }}>
+              <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-white)', margin: 0 }}>
                 👥 Primary Owner & Account Users ({memberships?.length || 0})
               </h2>
-              <Link href="/control-panel/modules/ecosystem/identities" style={{ color: 'var(--lam-gold)', fontSize: 'var(--text-xs)', textDecoration: 'none' }}>
-                Manage Identities →
-              </Link>
             </div>
 
             {memberships && memberships.length > 0 ? (
@@ -274,9 +309,8 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
                     <tr style={{ background: 'var(--lam-surface-elevated)', borderBottom: '1px solid var(--lam-border)' }}>
                       <th style={{ textAlign: 'left', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>Name</th>
                       <th style={{ textAlign: 'left', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>Work Email</th>
-                      <th style={{ textAlign: 'center', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>Company Role</th>
+                      <th style={{ textAlign: 'center', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>Role</th>
                       <th style={{ textAlign: 'center', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>Status</th>
-                      <th style={{ textAlign: 'right', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>Last Login</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -305,92 +339,17 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
                             {isOwner ? 'Company Owner' : 'Member'}
                           </td>
                           <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'center' }}>
-                              <span style={{
-                                padding: '0.15rem 0.4rem',
-                                borderRadius: '3px',
-                                fontSize: '9px',
-                                fontWeight: 600,
-                                textTransform: 'uppercase',
-                                background: user.status === 'active' ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
-                                color: user.status === 'active' ? '#2ecc71' : '#e74c3c'
-                              }}>
-                                {user.status}
-                              </span>
-                              {user.must_change_password && (
-                                <span style={{ fontSize: '9px', color: '#f1c40f' }}>
-                                  Pwd Change Required
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td style={{ padding: '0.65rem 0.85rem', textAlign: 'right', color: 'var(--lam-silver-dim)' }}>
-                            {user.last_login_at ? new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(user.last_login_at)) : 'Never'}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>
-                No customer user memberships attached to this organization yet.
-              </div>
-            )}
-          </div>
-
-          {/* 3. Explicit User Product Access Grants */}
-          <div className="lam-card">
-            <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-white)', marginBottom: '1.25rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
-              🔑 Explicit User Product Access Grants ({productAccess?.length || 0})
-            </h2>
-
-            {productAccess && productAccess.length > 0 ? (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
-                  <thead>
-                    <tr style={{ background: 'var(--lam-surface-elevated)', borderBottom: '1px solid var(--lam-border)' }}>
-                      <th style={{ textAlign: 'left', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>User Name</th>
-                      <th style={{ textAlign: 'left', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>Email</th>
-                      <th style={{ textAlign: 'center', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>Product</th>
-                      <th style={{ textAlign: 'center', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>Grant Status</th>
-                      <th style={{ textAlign: 'right', padding: '0.65rem 0.85rem', color: 'var(--lam-silver-dim)' }}>Granted Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {productAccess.map((pa: any) => {
-                      const u = (pa.customer as any)
-                      if (!u) return null
-
-                      return (
-                        <tr key={pa.id} style={{ borderBottom: '1px solid var(--lam-border)' }}>
-                          <td style={{ padding: '0.65rem 0.85rem', fontWeight: 500, color: 'var(--lam-white)' }}>
-                            {u.first_name} {u.last_name || ''}
-                          </td>
-                          <td style={{ padding: '0.65rem 0.85rem', color: 'var(--lam-silver-light)' }}>
-                            {u.email}
-                          </td>
-                          <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
-                            <span className="badge badge-gold" style={{ fontSize: '9px' }}>
-                              {pa.product_slug.toUpperCase()}
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
                             <span style={{
                               padding: '0.15rem 0.4rem',
                               borderRadius: '3px',
                               fontSize: '9px',
                               fontWeight: 600,
                               textTransform: 'uppercase',
-                              background: pa.status === 'active' ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
-                              color: pa.status === 'active' ? '#2ecc71' : '#e74c3c'
+                              background: user.status === 'active' ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
+                              color: user.status === 'active' ? '#2ecc71' : '#e74c3c'
                             }}>
-                              {pa.status}
+                              {user.status}
                             </span>
-                          </td>
-                          <td style={{ padding: '0.65rem 0.85rem', textAlign: 'right', color: 'var(--lam-silver-dim)' }}>
-                            {new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium' }).format(new Date(pa.created_at))}
                           </td>
                         </tr>
                       )
@@ -400,7 +359,7 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
               </div>
             ) : (
               <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>
-                No explicit user product access grants registered.
+                No customer user memberships registered.
               </div>
             )}
           </div>
@@ -408,102 +367,29 @@ export default async function EcosystemCompanyDetailPage({ params }: Props) {
 
         {/* Right Column */}
         <div>
-          {/* 4. Company Product Entitlements */}
+          {/* Organizations List */}
           <div className="lam-card" style={{ marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-gold)', marginBottom: '1.25rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
-              📦 Product Subscriptions & Entitlements
+              🏛️ Organizations ({organizations?.length || 0})
             </h2>
 
-            {entitlements && entitlements.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {entitlements.map((ent) => (
-                  <div key={ent.id} style={{ background: 'var(--lam-surface)', padding: '1rem', borderRadius: '6px', border: '1px solid var(--lam-border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontWeight: 700, color: 'var(--lam-white)', fontSize: 'var(--text-sm)' }}>
-                        {ent.product_slug.toUpperCase()}
-                      </span>
-                      <span style={{
-                        padding: '0.15rem 0.4rem',
-                        borderRadius: '3px',
-                        fontSize: '9px',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        background: ent.status === 'active' ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
-                        color: ent.status === 'active' ? '#2ecc71' : '#e74c3c'
-                      }}>
-                        {ent.status}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: 'var(--text-xs)', color: 'var(--lam-silver-light)' }}>
-                      <div>Plan: <strong style={{ color: 'var(--lam-gold)' }}>{ent.plan_tier.toUpperCase()}</strong></div>
-                      <div>Seats: <strong style={{ color: 'var(--lam-white)' }}>{ent.max_seats} Max</strong></div>
-                      {ent.expires_at && (
-                        <div style={{ gridColumn: 'span 2', color: 'var(--lam-silver-dim)', marginTop: '0.25rem' }}>
-                          Expires: {new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium' }).format(new Date(ent.expires_at))}
-                        </div>
-                      )}
-                    </div>
+            {organizations && organizations.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {organizations.map((org: any) => (
+                  <div key={org.id} style={{ background: 'var(--lam-surface)', padding: '0.85rem', borderRadius: '4px', border: '1px solid var(--lam-border)' }}>
+                    <div style={{ color: 'var(--lam-white)', fontWeight: 600, fontSize: 'var(--text-xs)' }}>{org.name}</div>
+                    <div style={{ color: 'var(--lam-gold)', fontFamily: 'monospace', fontSize: '11px', marginTop: '0.2rem' }}>{org.organization_code}</div>
                   </div>
                 ))}
               </div>
             ) : (
               <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>
-                No active product entitlements assigned.
+                No organizations attached.
               </div>
             )}
           </div>
 
-          {/* 5. Product Tenant Instances (e.g. NEXORA Workspace Reference) */}
-          <div className="lam-card" style={{ marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-white)', marginBottom: '1.25rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
-              ⚡ SaaS Tenant Instances
-            </h2>
-
-            {instances && instances.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {instances.map((inst) => (
-                  <div key={inst.id} style={{ background: 'var(--lam-surface)', padding: '1rem', borderRadius: '6px', border: '1px solid var(--lam-border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontWeight: 600, color: 'var(--lam-white)', fontSize: 'var(--text-xs)' }}>
-                        {inst.product_slug.toUpperCase()} Instance
-                      </span>
-                      <span style={{
-                        padding: '0.15rem 0.4rem',
-                        borderRadius: '3px',
-                        fontSize: '9px',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        background: inst.status === 'active' ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
-                        color: inst.status === 'active' ? '#2ecc71' : '#e74c3c'
-                      }}>
-                        {inst.status}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-light)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <div>Tenant Key: <code style={{ color: 'var(--lam-gold)', fontFamily: 'monospace' }}>{inst.instance_key}</code></div>
-                      <div>Environment: <span style={{ textTransform: 'capitalize' }}>{inst.environment}</span></div>
-                      {inst.instance_url && (
-                        <div>
-                          URL:{' '}
-                          <a href={inst.instance_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--lam-gold)', textDecoration: 'none' }}>
-                            {inst.instance_url}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)' }}>
-                No product instances registered yet.
-              </div>
-            )}
-          </div>
-
-          {/* 6. Account Audit History */}
+          {/* Account Audit History */}
           <div className="lam-card">
             <h2 style={{ fontSize: 'var(--text-lg)', color: 'var(--lam-white)', marginBottom: '1.25rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.75rem' }}>
               📋 Account Activity Log

@@ -19,14 +19,24 @@ export interface CustomerLoginResult {
   productSlug?: string
 }
 
-export async function customerLogin(formData: FormData): Promise<CustomerLoginResult> {
-  const mode = (formData.get('login_mode') as string) || 'employee'
-  const workspaceCode = (formData.get('workspace_code') as string)?.trim().toUpperCase()
-  const userId = (formData.get('user_id') as string)?.trim().toLowerCase()
-  const email = (formData.get('email') as string)?.trim().toLowerCase()
-  const password = formData.get('password') as string
-  const returnTo = (formData.get('return_to') as string) || '/portal'
-  const requestingProduct = (formData.get('requesting_product') as string)?.trim().toLowerCase()
+export async function customerLogin(formDataInput: FormData | Record<string, any>): Promise<CustomerLoginResult> {
+  const isFormData = typeof FormData !== 'undefined' && formDataInput instanceof FormData
+  const getValue = (key: string, altKey?: string) => {
+    if (isFormData) {
+      const val = (formDataInput as FormData).get(key)
+      return val ? String(val) : altKey ? ((formDataInput as FormData).get(altKey) ? String((formDataInput as FormData).get(altKey)) : undefined) : undefined
+    }
+    const obj = formDataInput as Record<string, any>
+    return obj[key] !== undefined ? String(obj[key]) : altKey && obj[altKey] !== undefined ? String(obj[altKey]) : undefined
+  }
+
+  const mode = getValue('login_mode', 'loginType') || 'employee'
+  const workspaceCode = getValue('workspace_code', 'workspaceCode')?.trim().toUpperCase()
+  const userId = getValue('user_id', 'userId')?.trim().toLowerCase()
+  const email = getValue('email')?.trim().toLowerCase()
+  const password = getValue('password') || ''
+  const returnTo = getValue('return_to', 'returnTo') || '/portal'
+  const requestingProduct = getValue('requesting_product', 'requestingProduct')?.trim().toLowerCase()
   const safeReturnTo = (returnTo.startsWith('/') && !returnTo.startsWith('//')) ? returnTo : '/portal'
 
   // If workspace_code & user_id are supplied OR mode === 'employee', process workspace login
@@ -307,28 +317,56 @@ export async function customerWorkspaceLogin(params: {
  * Create a new independent workspace employee account (Customer Identity + Auth user + Membership)
  */
 export async function createWorkspaceEmployeeAccount(params: {
-  workspaceId: string
-  userId: string
+  workspaceId?: string
+  workspace_id?: string
+  workspaceCode?: string
+  workspace_code?: string
+  userId?: string
+  user_id?: string
   password?: string
-  firstName: string
+  initial_password?: string
+  firstName?: string
+  first_name?: string
   lastName?: string
+  last_name?: string
   workspaceRole?: string
+  role?: string
   contactEmail?: string
 }) {
-  const { workspaceId, userId, password, firstName, lastName, workspaceRole = 'member', contactEmail } = params
+  const wsId = params.workspaceId || params.workspace_id
+  const wsCode = params.workspaceCode || params.workspace_code
+  const uId = params.userId || params.user_id
+  const pwd = params.password || params.initial_password
+  const fName = params.firstName || params.first_name || 'Employee'
+  const lName = params.lastName || params.last_name || ''
+  const wRole = params.workspaceRole || params.role || 'member'
 
   const supabase = getSupabaseAdmin()
 
   // 1. Verify target workspace exists and product uses lam_sso
-  const { data: workspace, error: wsErr } = await supabase
+  let wsQuery = supabase
     .from('lam_product_workspaces')
     .select('id, workspace_code, product_slug, max_seats')
-    .eq('id', workspaceId)
-    .single()
+
+  if (wsId) {
+    wsQuery = wsQuery.eq('id', wsId)
+  } else if (wsCode) {
+    wsQuery = wsQuery.ilike('workspace_code', wsCode)
+  } else {
+    return { success: false, error: 'Target workspace_id or workspace_code is required.' }
+  }
+
+  const { data: workspace, error: wsErr } = await wsQuery.maybeSingle()
 
   if (wsErr || !workspace) {
     return { success: false, error: 'Target product workspace not found.' }
   }
+
+  const userId = uId!
+  const password = pwd
+  const firstName = fName
+  const lastName = lName
+  const workspaceRole = wRole
 
   // 1b. Check active seat usage against max_seats limit
   const { count: activeSeats } = await supabase
@@ -387,6 +425,8 @@ export async function createWorkspaceEmployeeAccount(params: {
   }
 
   const authUserId = authUser.user.id
+
+  const contactEmail = params.contactEmail || null
 
   // 6. Create independent linked customer_identities row
   const { data: newCustomer, error: custError } = await supabase
@@ -889,8 +929,10 @@ export async function submitCustomerSupportTicket(formData: FormData) {
 // STAGE D: OWNER CONSOLE & STRICT EMPLOYEE ISOLATION ACTIONS
 // --------------------------------------------------------------------------
 
-export async function getOwnerConsoleData() {
-  const currentCustomer = await getCurrentCustomer()
+export async function getOwnerConsoleData(overrideCustomerId?: string) {
+  const currentCustomer = overrideCustomerId
+    ? { id: overrideCustomerId }
+    : await getCurrentCustomer()
   if (!currentCustomer) return { isOwner: false, error: 'Unauthorized' }
 
   const supabase = getSupabaseAdmin()
@@ -913,11 +955,11 @@ export async function getOwnerConsoleData() {
   const company = (compMem as any)?.company
   let customerAccountId = company?.customer_account_id
 
-  if (!customerAccountId) {
+  if (!customerAccountId && company?.name) {
     const { data: ca } = await supabase
       .from('lam_customer_accounts')
       .select('id')
-      .limit(1)
+      .ilike('name', company.name)
       .maybeSingle()
     customerAccountId = ca?.id
   }

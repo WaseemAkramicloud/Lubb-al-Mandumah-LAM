@@ -9,6 +9,7 @@ interface ProductItem {
   name: string
   product_id?: string
   restricted?: boolean
+  identity_mode?: string
 }
 
 interface Props {
@@ -24,6 +25,9 @@ export default function OnboardingForm({ products = [] }: Props) {
   const [copiedCreds, setCopiedCreds] = useState(false)
   const [copiedPwdOnly, setCopiedPwdOnly] = useState(false)
   const [showInitialPwd, setShowInitialPwd] = useState(false)
+
+  // Filter products to ONLY identity_mode = 'lam_sso'
+  const eligibleProducts = products.filter(p => p.identity_mode === 'lam_sso' || !p.identity_mode || ['nexora', 'atom', 'aimhighserp', 'maams'].includes(p.slug))
 
   // Form field state
   const [formData, setFormData] = useState({
@@ -85,7 +89,7 @@ export default function OnboardingForm({ products = [] }: Props) {
   const handleReviewStep = (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.company_name.trim() || !formData.owner_first_name.trim() || !formData.owner_email.trim()) {
-      alert('Please fill in required fields (Company Name, Owner First Name, LAM ID / Owner Email).')
+      alert('Please fill in required fields (Company Name, Owner First Name, Verified Work Email).')
       return
     }
     setIsReviewStep(true)
@@ -109,7 +113,7 @@ export default function OnboardingForm({ products = [] }: Props) {
 
   const handleCopyDetails = () => {
     if (state?.ownerEmail && state?.temporaryPassword) {
-      const details = `LAM ID Login Details:\nURL: https://id.lubbalmandumah.com\nLAM ID / Login Email: ${state.ownerEmail}\nInitial Password: ${state.temporaryPassword}\nNote: The Company Owner may keep this password or change it later from their LAM ID account.`
+      const details = `LAM Access / Owner Credentials:\nLogin Hub: https://access.lubbalmandumah.com\nCustomer Account Code: ${state.customerAccountCode || 'N/A'}\nOrganization Code: ${state.organizationCode || 'N/A'}\nWorkspace Code: ${state.workspaceCode || 'N/A'}\nOwner Work Email: ${state.ownerEmail}\nInitial Password: ${state.temporaryPassword}\nNote: Log in as Company Owner using Work Email + Password at https://access.lubbalmandumah.com.`
       navigator.clipboard.writeText(details)
       setCopiedCreds(true)
       setTimeout(() => setCopiedCreds(false), 2500)
@@ -119,39 +123,44 @@ export default function OnboardingForm({ products = [] }: Props) {
   if (state?.success) {
     return (
       <div className="lam-card" style={{ background: 'var(--lam-surface-elevated)', border: '1px solid var(--lam-gold)' }}>
-        <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎉</div>
-          <h2 style={{ fontSize: 'var(--text-xl)', color: 'var(--lam-gold)', marginBottom: '0.5rem' }}>
+        <div style={{ padding: '1.5rem 0' }}>
+          <div style={{ textAlign: 'center', fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎉</div>
+          <h2 style={{ textAlign: 'center', fontSize: 'var(--text-xl)', color: 'var(--lam-gold)', marginBottom: '0.5rem' }}>
             Client Onboarding Complete!
           </h2>
-          <p style={{ color: 'var(--lam-silver-light)', fontSize: 'var(--text-sm)', marginBottom: '1.5rem' }}>
+          <p style={{ textAlign: 'center', color: 'var(--lam-silver-light)', fontSize: 'var(--text-sm)', marginBottom: '1.5rem' }}>
             {state.message}
           </p>
 
           <div style={{ background: 'var(--lam-black)', padding: '1.5rem', borderRadius: '6px', border: '1px solid var(--lam-border)', marginBottom: '1.5rem', textAlign: 'left' }}>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--lam-gold)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '1rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.5rem' }}>
+              📋 Provisioned Account Hierarchy & Owner Credentials
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem', fontSize: 'var(--text-xs)' }}>
-              <div>Company: <strong style={{ color: 'var(--lam-white)' }}>{state.companyName}</strong></div>
-              <div>Primary Owner: <strong style={{ color: 'var(--lam-white)' }}>{state.ownerFirstName} {state.ownerLastName || ''}</strong></div>
-              <div>Company Role: <strong style={{ color: 'var(--lam-gold)' }}>Company Owner</strong></div>
-              <div>LAM ID / Login Email: <strong style={{ color: 'var(--lam-white)' }}>{state.ownerEmail}</strong></div>
-              <div>Subscribed Product: <strong style={{ color: 'var(--lam-gold)' }}>{state.productSlug?.toUpperCase()}</strong></div>
-              <div>Seat Allowance: <strong style={{ color: 'var(--lam-white)' }}>1 of {state.maxSeats} Seats Used (1 Owner Seat Consumed)</strong></div>
-              <div>Owner Product Access: <span style={{ color: '#2ecc71', fontWeight: 600 }}>{state.productSlug?.toUpperCase()} — ACTIVE</span></div>
-              <div>Account Status: <strong style={{ color: 'var(--lam-gold)' }}>{state.isExistingIdentity ? 'Active Identity' : 'Account Ready'}</strong></div>
+              <div>Customer Account: <strong style={{ color: 'var(--lam-white)' }}>{state.companyName}</strong></div>
+              <div>Customer Account Code: <strong style={{ color: 'var(--lam-gold)', fontFamily: 'monospace' }}>{state.customerAccountCode || '-'}</strong></div>
+              <div>Organization Code: <strong style={{ color: 'var(--lam-gold)', fontFamily: 'monospace' }}>{state.organizationCode || '-'}</strong></div>
+              <div>Subscribed Product Workspace: <strong style={{ color: 'var(--lam-gold)', fontFamily: 'monospace' }}>{state.workspaceCode || '-'} ({state.productSlug?.toUpperCase()})</strong></div>
+              <div>Primary Company Owner: <strong style={{ color: 'var(--lam-white)' }}>{state.ownerFirstName} {state.ownerLastName || ''}</strong></div>
+              <div>Owner Work Email: <strong style={{ color: 'var(--lam-gold)' }}>{state.ownerEmail}</strong></div>
+              <div>Seat Allowance: <strong style={{ color: 'var(--lam-white)' }}>1 of {state.maxSeats} Active Seats Used</strong></div>
+              <div>Access Hub URL: <strong style={{ color: 'var(--lam-gold)' }}>https://access.lubbalmandumah.com</strong></div>
             </div>
 
             {state.isExistingIdentity ? (
               <div style={{ padding: '0.85rem', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.3)', borderRadius: '4px', color: '#2ecc71', fontSize: 'var(--text-xs)' }}>
-                ℹ️ <strong>Existing LAM ID Detected:</strong> Primary owner already has a valid LAM ID account ({state.ownerEmail}). Existing login credentials remain unchanged.
+                ℹ️ <strong>Existing Company Owner Identity Detected:</strong> Primary owner already has a valid LAM account ({state.ownerEmail}). Existing login credentials remain operational.
               </div>
             ) : state.provisionMode === 'password' && state.temporaryPassword ? (
               <div style={{ borderTop: '1px solid var(--lam-border)', paddingTop: '1.25rem' }}>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-gold)', textTransform: 'uppercase', marginBottom: '0.75rem', fontWeight: 600 }}>
-                  🔑 LAM ID Login Details
+                  🔑 ONE-TIME OWNER CREDENTIALS BLOCK
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: 'var(--text-xs)', background: 'var(--lam-surface)', padding: '1rem', borderRadius: '4px', border: '1px solid var(--lam-border)' }}>
-                  <div>Login URL: <code style={{ color: 'var(--lam-gold)' }}>https://id.lubbalmandumah.com</code></div>
-                  <div>LAM ID / Login Email: <code style={{ color: 'var(--lam-white)' }}>{state.ownerEmail}</code></div>
+                  <div>Login URL: <code style={{ color: 'var(--lam-gold)' }}>https://access.lubbalmandumah.com</code></div>
+                  <div>Owner Work Email: <code style={{ color: 'var(--lam-white)' }}>{state.ownerEmail}</code></div>
+                  <div>Workspace Code: <code style={{ color: 'var(--lam-gold)', fontFamily: 'monospace' }}>{state.workspaceCode}</code></div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <span>Initial Password:</span>
                     <code style={{ background: 'black', padding: '0.2rem 0.5rem', borderRadius: '3px', color: 'var(--lam-gold)', fontFamily: 'monospace' }}>
@@ -175,7 +184,7 @@ export default function OnboardingForm({ products = [] }: Props) {
                     </button>
                   </div>
                   <div style={{ color: 'var(--lam-silver-dim)', fontSize: '11px', marginTop: '0.25rem' }}>
-                    The Company Owner may keep this password or change it later from their LAM ID account.
+                    ⚠️ Note: Company Owner logs in via <strong>Work Email + Password</strong> at <code>https://access.lubbalmandumah.com</code>. The Workspace Code is assigned to the workspace, not used as the Owner's login username.
                   </div>
                 </div>
 
@@ -186,14 +195,14 @@ export default function OnboardingForm({ products = [] }: Props) {
                     className="btn btn-primary"
                     style={{ fontSize: 'var(--text-xs)', padding: '0.6rem 1.25rem' }}
                   >
-                    {copiedCreds ? 'Login Details Copied! ✓' : 'Copy Login Details'}
+                    {copiedCreds ? 'Owner Credentials Copied! ✓' : 'Copy Owner Credentials'}
                   </button>
                 </div>
               </div>
             ) : (
               <div style={{ borderTop: '1px solid var(--lam-border)', paddingTop: '1.25rem' }}>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-silver-dim)', textTransform: 'uppercase', marginBottom: '0.5rem', fontWeight: 600 }}>
-                  🔗 Secure Account Setup Link
+                  🔗 Secure Setup Link
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <input
@@ -259,7 +268,6 @@ export default function OnboardingForm({ products = [] }: Props) {
       <input type="hidden" name="provision_mode" value={formData.provision_mode} />
       <input type="hidden" name="initial_password" value={formData.initial_password} />
 
-      {/* Preset Bars */}
       {!isReviewStep && (
         <div style={{
           display: 'flex',
@@ -327,11 +335,11 @@ export default function OnboardingForm({ products = [] }: Props) {
           {/* Section 1: Company Profile */}
           <div>
             <h3 style={{ fontSize: 'var(--text-base)', color: 'var(--lam-gold)', marginBottom: '1rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.5rem' }}>
-              1. Company Profile & Account Type
+              1. Commercial Client Profile & Account Type
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
               <div className="lam-form-group">
-                <label className="lam-label">Company Name *</label>
+                <label className="lam-label">Commercial Client / Customer Account Name *</label>
                 <input
                   type="text"
                   name="company_name"
@@ -383,10 +391,10 @@ export default function OnboardingForm({ products = [] }: Props) {
             </div>
           </div>
 
-          {/* Section 2: Primary Owner Identity & LAM ID Login */}
+          {/* Section 2: Primary Company Owner Identity */}
           <div>
             <h3 style={{ fontSize: 'var(--text-base)', color: 'var(--lam-gold)', marginBottom: '1rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.5rem' }}>
-              2. Primary Owner Identity & LAM ID Login
+              2. Company Owner Identity & Credentials
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
               <div className="lam-form-group">
@@ -416,7 +424,7 @@ export default function OnboardingForm({ products = [] }: Props) {
 
               <div className="lam-form-group" style={{ gridColumn: 'span 2' }}>
                 <label className="lam-label" style={{ color: 'var(--lam-gold)', fontWeight: 600 }}>
-                  LAM ID / Login Email *
+                  Verified Work Email *
                 </label>
                 <input
                   type="email"
@@ -429,35 +437,39 @@ export default function OnboardingForm({ products = [] }: Props) {
                   style={{ border: '1px solid var(--lam-gold)' }}
                 />
                 <span style={{ fontSize: '11px', color: 'var(--lam-silver-dim)', marginTop: '0.35rem', display: 'block', lineHeight: 1.4 }}>
-                  This is the email/ID the Company Owner will use to sign in to LAM ID and access the company's subscribed LAM products. (Primary Owner Work Email = LAM ID Login Email. No separate human username or company code required for login).
+                  Company Owner logs in via <strong>Work Email + Password</strong> at <code>https://access.lubbalmandumah.com</code>.
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Section 3: Product Entitlements */}
+          {/* Section 3: Product Entitlements (SSO Products Only) */}
           <div>
             <h3 style={{ fontSize: 'var(--text-base)', color: 'var(--lam-gold)', marginBottom: '1rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.5rem' }}>
-              3. SaaS Product Entitlement & Seat Limits
+              3. SaaS Product Workspace Provisioning (LAM SSO Eligible Products Only)
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
               <div className="lam-form-group">
-                <label className="lam-label">Target SaaS Application</label>
+                <label className="lam-label">Target Product Workspace</label>
                 <select name="product_slug" value={formData.product_slug} onChange={handleInputChange} className="lam-input" style={{ background: 'var(--lam-surface)', color: 'white' }}>
-                  {products && products.length > 0 ? (
-                    products.map(p => (
+                  {eligibleProducts && eligibleProducts.length > 0 ? (
+                    eligibleProducts.map(p => (
                       <option key={p.slug} value={p.slug}>
                         {p.name} ({p.product_id || p.slug.toUpperCase()}){p.restricted ? ' — By Invitation' : ''}
                       </option>
                     ))
                   ) : (
                     <>
-                      <option value="nexora">NEXORA — Next-Gen Enterprise Management</option>
+                      <option value="nexora">NEXORA — Enterprise Operations & Management</option>
                       <option value="atom">ATOM — Tech & Operations Engine</option>
-                      <option value="pointo">PointO — POS & Distribution</option>
+                      <option value="aimhighserp">AimHighSERP — SEO & Search Analytics</option>
+                      <option value="maams">MAAMS — Diplomatic Mission Asset Management</option>
                     </>
                   )}
                 </select>
+                <span style={{ fontSize: '11px', color: 'var(--lam-silver-dim)', marginTop: '0.25rem', display: 'block' }}>
+                  PointO & AMAL operate independently outside central SSO and are excluded from workspace provisioning.
+                </span>
               </div>
 
               <div className="lam-form-group">
@@ -471,7 +483,7 @@ export default function OnboardingForm({ products = [] }: Props) {
               </div>
 
               <div className="lam-form-group">
-                <label className="lam-label">Seat Allowance (Max Users)</label>
+                <label className="lam-label">Seat Allowance (Max Workspace Users)</label>
                 <input
                   type="number"
                   name="max_seats"
@@ -482,12 +494,12 @@ export default function OnboardingForm({ products = [] }: Props) {
                   className="lam-input"
                 />
                 <span style={{ fontSize: '11px', color: 'var(--lam-silver-dim)', marginTop: '0.25rem', display: 'block' }}>
-                  Primary Owner consumes 1 seat automatically upon provisioning.
+                  Company Owner consumes 1 active seat automatically.
                 </span>
               </div>
 
               <div className="lam-form-group">
-                <label className="lam-label">Optional Demo Expiry (Days from today)</label>
+                <label className="lam-label">Optional Evaluation Expiry (Days from today)</label>
                 <input
                   type="number"
                   name="expires_days"
@@ -505,7 +517,7 @@ export default function OnboardingForm({ products = [] }: Props) {
           {/* Section 4: Owner Account Access Setup */}
           <div>
             <h3 style={{ fontSize: 'var(--text-base)', color: 'var(--lam-gold)', marginBottom: '1rem', borderBottom: '1px solid var(--lam-border)', paddingBottom: '0.5rem' }}>
-              4. Owner Account Access Setup
+              4. Owner Access Credentials Setup
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <label style={{
@@ -528,10 +540,10 @@ export default function OnboardingForm({ products = [] }: Props) {
                 />
                 <div>
                   <div style={{ color: 'var(--lam-white)', fontWeight: 600, fontSize: 'var(--text-sm)' }}>
-                    Option A: Direct Credentials / Initial Password (Default)
+                    Option A: Direct Initial Password (Default)
                   </div>
                   <div style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', marginTop: '0.25rem', lineHeight: 1.5 }}>
-                    Generates a strong Initial Password server-side. The administrator provides the LAM ID + Initial Password to the Company Owner. The owner may keep this password or change it later voluntarily.
+                    Generates an initial password server-side. The administrator provides the credentials block to the Company Owner.
                   </div>
                 </div>
               </label>
@@ -556,10 +568,10 @@ export default function OnboardingForm({ products = [] }: Props) {
                 />
                 <div>
                   <div style={{ color: 'var(--lam-white)', fontWeight: 600, fontSize: 'var(--text-sm)' }}>
-                    Option B: Secure Setup Link
+                    Option B: Secure Invitation Link
                   </div>
                   <div style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-xs)', marginTop: '0.25rem', lineHeight: 1.5 }}>
-                    Generates a single-use secure setup link that can be copied and sent via email, WhatsApp, or chat. No customer password is created by the administrator.
+                    Generates a single-use setup link for the owner to complete password registration.
                   </div>
                 </div>
               </label>
@@ -576,7 +588,7 @@ export default function OnboardingForm({ products = [] }: Props) {
               className="btn btn-primary"
               style={{ padding: '0.85rem 2rem' }}
             >
-              Review New Client →
+              Review Client Onboarding →
             </button>
           </div>
         </>
@@ -586,14 +598,14 @@ export default function OnboardingForm({ products = [] }: Props) {
             Review New Client Setup
           </h2>
           <p style={{ color: 'var(--lam-silver-dim)', fontSize: 'var(--text-sm)', marginBottom: '1.5rem' }}>
-            Please verify the client company details, primary owner identity, and login details before confirming creation.
+            Please verify the client details, primary owner identity, and product workspace configuration before confirming creation.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
             <div style={{ background: 'var(--lam-surface)', padding: '1.25rem', borderRadius: '6px', border: '1px solid var(--lam-border)' }}>
               <h4 style={{ fontSize: 'var(--text-sm)', color: 'var(--lam-gold)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Company Profile</h4>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-white)', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <div>Name: <strong>{formData.company_name}</strong></div>
+                <div>Client Name: <strong>{formData.company_name}</strong></div>
                 <div>Legal Name: <span>{formData.legal_name || '-'}</span></div>
                 <div>Type: <strong style={{ color: formData.company_type === 'demo' ? '#f1c40f' : '#2ecc71' }}>{formData.company_type.toUpperCase()}</strong></div>
                 <div>Location: <span>{formData.country || '-'}</span></div>
@@ -602,26 +614,22 @@ export default function OnboardingForm({ products = [] }: Props) {
 
             <div style={{ background: 'var(--lam-surface)', padding: '1.25rem', borderRadius: '6px', border: '1px solid var(--lam-border)' }}>
               <h4 style={{ fontSize: 'var(--text-sm)', color: 'var(--lam-gold)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-                Company Owner Login Details
+                Company Owner Identity
               </h4>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-white)', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <div>Company Owner: <strong>{formData.owner_first_name} {formData.owner_last_name}</strong></div>
-                <div>LAM ID / Login Email: <strong style={{ color: 'var(--lam-gold)' }}>{formData.owner_email}</strong></div>
-                <div>Login URL: <code style={{ color: 'var(--lam-gold)' }}>https://id.lubbalmandumah.com</code></div>
-                <div>Initial Password: <span>{formData.provision_mode === 'password' ? 'Will be generated when the client is created' : 'Setup Link selected'}</span></div>
-                <div>Password Change: <span>Optional (Customer may keep password or change voluntarily)</span></div>
-                <div>Company Role: <strong>Company Owner</strong></div>
-                <div>Subscribed Product(s): <strong>{formData.product_slug.toUpperCase()}</strong></div>
+                <div>Owner Name: <strong>{formData.owner_first_name} {formData.owner_last_name}</strong></div>
+                <div>Work Email: <strong style={{ color: 'var(--lam-gold)' }}>{formData.owner_email}</strong></div>
+                <div>Access URL: <code style={{ color: 'var(--lam-gold)' }}>https://access.lubbalmandumah.com</code></div>
+                <div>Role: <strong>Company Owner</strong></div>
               </div>
             </div>
 
             <div style={{ background: 'var(--lam-surface)', padding: '1.25rem', borderRadius: '6px', border: '1px solid var(--lam-border)', gridColumn: 'span 2' }}>
-              <h4 style={{ fontSize: 'var(--text-sm)', color: 'var(--lam-gold)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Product Entitlement & Owner Grant</h4>
+              <h4 style={{ fontSize: 'var(--text-sm)', color: 'var(--lam-gold)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Product Workspace & Entitlements</h4>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--lam-white)', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                 <div>Product: <strong style={{ color: 'var(--lam-gold)' }}>{formData.product_slug.toUpperCase()}</strong></div>
                 <div>Plan: <span>{formData.plan_tier.toUpperCase()}</span></div>
-                <div>Seat Limit: <span>{formData.max_seats} Max (1 Seat Consumed by Owner)</span></div>
-                <div>Owner Access: <span style={{ color: '#2ecc71', fontWeight: 600 }}>EXPLICIT ACTIVE</span></div>
+                <div>Seat Limit: <span>{formData.max_seats} Max Seats</span></div>
               </div>
             </div>
           </div>
@@ -641,7 +649,7 @@ export default function OnboardingForm({ products = [] }: Props) {
               className="btn btn-primary"
               style={{ padding: '0.85rem 2rem' }}
             >
-              {isPending ? 'Provisioning Client...' : 'Confirm & Create Client →'}
+              {isPending ? 'Provisioning Client...' : 'Confirm & Provision Client →'}
             </button>
           </div>
         </div>
