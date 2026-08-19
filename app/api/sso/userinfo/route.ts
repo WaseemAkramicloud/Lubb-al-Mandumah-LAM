@@ -37,14 +37,18 @@ async function handleUserInfo(request: NextRequest) {
     return NextResponse.json({ error: 'invalid_token', error_description: 'Customer account suspended or disabled' }, { status: 401 })
   }
 
+  const cleanEmail = customer.email && !customer.email.endsWith('@users.lam.internal') ? customer.email : null
+
   return NextResponse.json({
     sub: customer.id,
-    email: customer.email,
-    email_verified: true,
-    first_name: customer.first_name,
-    last_name: customer.last_name,
-    company_id: payload.company_id,
-    company_role: payload.company_role,
-    granted_products: payload.products || []
+    aud: payload.aud,
+    workspace_id: payload.workspace_id || null,
+    workspace_code: payload.workspace_code || null,
+    product: payload.product || null,
+    workspace_role: payload.workspace_role || 'member',
+    email: cleanEmail,
+    email_verified: !!cleanEmail,
+    given_name: customer.first_name || 'User',
+    family_name: customer.last_name || null
   })
 }

@@ -5,23 +5,17 @@ export interface AccessValidationResult {
   reason?: string
   customer?: any
   company?: any
-  companyRole?: string
-  grantedProducts?: string[]
+  workspace?: any
+  workspaceRole?: string
 }
 
 /**
- * Validates whether a customer identity has authorization to enter a specific product application.
- * 
- * CORE ARCHITECTURAL RULE:
- * 1. Customer identity must exist and be 'active' (not suspended).
- * 2. Customer must be an 'active' member of a company.
- * 3. The company must have an 'active' product entitlement for target product_slug.
- * 4. The user must have EXPLICIT user-level product access grant (customer_product_access) for product_slug.
- *    Being a company member does NOT automatically grant access to every product.
+ * Validates whether a customer identity has authorization to enter a specific product application / workspace.
  */
 export async function validateCustomerProductAccess(
   customerId: string,
-  productSlug: string
+  productSlug: string,
+  requestedWorkspaceCode?: string
 ): Promise<AccessValidationResult> {
   const supabase = getSupabaseAdmin()
 
@@ -44,70 +38,79 @@ export async function validateCustomerProductAccess(
     return { allowed: false, reason: `Account status is ${customer.status}.` }
   }
 
-  // 2. Fetch active company membership
-  const { data: memberships, error: memError } = await supabase
-    .from('customer_company_memberships')
-    .select(`
-      id, company_role, status, company_id,
-      company:crm_companies (id, name, status)
-    `)
-    .eq('customer_id', customerId)
-    .eq('status', 'active')
+  // 2. Check Product Identity Mode in Central Product Registry
+  const { data: prod } = await supabase
+    .from('lam_products')
+    .select('identity_mode, name')
+    .eq('slug', productSlug)
+    .maybeSingle()
 
-  if (memError || !memberships || memberships.length === 0) {
-    return { allowed: false, reason: 'User does not belong to an active organization.' }
+  if (prod?.identity_mode !== 'lam_sso') {
+    return { allowed: false, reason: `Product '${prod?.name || productSlug}' does not participate in central LAM SSO.` }
   }
 
-  // Find membership where company is active and has entitlement + explicit access
-  for (const mem of memberships) {
-    const company = mem.company as any
-    if (!company || company.status !== 'Active') continue
+  // 3. Resolve Workspace & Membership Context
+  let workspaceQuery = supabase
+    .from('lam_product_workspaces')
+    .select('*, customer_account:lam_customer_accounts(*), organization:lam_organizations(*)')
+    .eq('product_slug', productSlug)
+    .eq('status', 'active')
 
-    // 3. Check Company Product Entitlement
-    const { data: entitlement } = await supabase
-      .from('customer_product_entitlements')
-      .select('id, status, plan_tier')
-      .eq('company_id', company.id)
-      .eq('product_slug', productSlug)
+  if (requestedWorkspaceCode) {
+    workspaceQuery = workspaceQuery.ilike('workspace_code', requestedWorkspaceCode)
+  }
+
+  const { data: workspaces } = await workspaceQuery
+
+  if (!workspaces || workspaces.length === 0) {
+    return { allowed: false, reason: `No active '${productSlug.toUpperCase()}' workspace found.` }
+  }
+
+  // Check membership in resolved workspaces
+  for (const ws of workspaces) {
+    // Verify cascading suspension hierarchy
+    if (ws.customer_account?.status === 'suspended') continue
+    if (ws.organization?.status === 'suspended') continue
+
+    // Check workspace membership
+    const { data: mem } = await supabase
+      .from('lam_workspace_memberships')
+      .select('id, workspace_role, status')
+      .eq('workspace_id', ws.id)
+      .eq('customer_id', customerId)
       .eq('status', 'active')
       .maybeSingle()
 
-    if (!entitlement) continue
+    if (mem) {
+      return {
+        allowed: true,
+        customer,
+        workspace: ws,
+        workspaceRole: mem.workspace_role
+      }
+    }
 
-    // 4. Check Explicit User Product Access Grant
-    const { data: explicitAccess } = await supabase
-      .from('customer_product_access')
-      .select('id, status')
+    // Check if caller is Company Owner on the customer account (Company Owner Launch Mode)
+    const { data: ownerMem } = await supabase
+      .from('customer_company_memberships')
+      .select('company_role')
       .eq('customer_id', customerId)
-      .eq('company_id', company.id)
-      .eq('product_slug', productSlug)
       .eq('status', 'active')
       .maybeSingle()
 
-    if (!explicitAccess) continue
-
-    // Fetch all explicitly granted products for this user in this company (for token payload)
-    const { data: allGranted } = await supabase
-      .from('customer_product_access')
-      .select('product_slug')
-      .eq('customer_id', customerId)
-      .eq('company_id', company.id)
-      .eq('status', 'active')
-
-    const grantedProducts = (allGranted || []).map(g => g.product_slug)
-
-    return {
-      allowed: true,
-      customer,
-      company,
-      companyRole: mem.company_role,
-      grantedProducts
+    if (ownerMem && ['owner', 'admin'].includes(ownerMem.company_role)) {
+      return {
+        allowed: true,
+        customer,
+        workspace: ws,
+        workspaceRole: 'owner'
+      }
     }
   }
 
   return {
     allowed: false,
-    reason: `Access to product '${productSlug.toUpperCase()}' is not granted for your account or organization.`
+    reason: `Access to product '${productSlug.toUpperCase()}' workspace is not granted for your account.`
   }
 }
 
@@ -117,19 +120,45 @@ export async function validateCustomerProductAccess(
 export async function verifySsoClientApp(clientId: string, redirectUri: string) {
   const supabase = getSupabaseAdmin()
 
+  // 1. Check Product Registry for SSO Eligibility
+  const { data: prod } = await supabase
+    .from('lam_products')
+    .select('*')
+    .eq('client_id', clientId)
+    .maybeSingle()
+
+  if (prod && prod.identity_mode !== 'lam_sso') {
+    return { valid: false, error: `Product '${prod.name}' does not participate in central LAM SSO.` }
+  }
+
   const { data: app, error } = await supabase
     .from('sso_applications')
     .select('*')
     .eq('client_id', clientId)
-    .single()
+    .maybeSingle()
 
   if (error || !app) {
+    // If registered in lam_products with identity_mode = 'lam_sso', construct dynamic client application context
+    if (prod && prod.identity_mode === 'lam_sso') {
+      const appUrl = prod.app_url || `https://${prod.slug}.lubbalmandumah.com`
+      if (redirectUri.startsWith(appUrl) || redirectUri.includes(prod.slug)) {
+        return {
+          valid: true,
+          app: {
+            client_id: clientId,
+            product_slug: prod.slug,
+            app_name: prod.name,
+            redirect_uris: [appUrl]
+          }
+        }
+      }
+    }
     return { valid: false, error: 'Unregistered client_id application.' }
   }
 
   // Check redirect URI match
   const uriMatch = app.redirect_uris.some((registeredUri: string) => {
-    return redirectUri.startsWith(registeredUri) || registeredUri === redirectUri
+    return redirectUri.startsWith(registeredUri) || registeredUri === redirectUri || redirectUri.includes(app.product_slug)
   })
 
   if (!uriMatch) {
@@ -150,13 +179,14 @@ export async function createAuthorizationCode(
   scope: string = 'openid profile email',
   codeChallenge?: string,
   codeChallengeMethod?: string,
-  nonce?: string
+  nonce?: string,
+  workspaceId?: string,
+  workspaceCode?: string
 ): Promise<string> {
   const supabase = getSupabaseAdmin()
   const code = 'code_' + crypto.randomUUID().replace(/-/g, '')
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minute code expiry
 
-  // Preserve scope strictly as 'openid profile email'
   const cleanScope = scope || 'openid profile email'
 
   const insertPayload: Record<string, any> = {
@@ -164,6 +194,8 @@ export async function createAuthorizationCode(
     client_id: clientId,
     customer_id: customerId,
     company_id: companyId || null,
+    workspace_id: workspaceId || null,
+    workspace_code: workspaceCode || null,
     redirect_uri: redirectUri,
     scope: cleanScope,
     nonce: nonce || null,
@@ -176,7 +208,9 @@ export async function createAuthorizationCode(
   const { error } = await supabase.from('sso_auth_codes').insert(insertPayload)
 
   if (error) {
-    // If dedicated nonce column is pending migration cache reload, store as dedicated challenge metadata
+    // Handle fallback if optional workspace or nonce columns are pending schema cache reload
+    delete insertPayload.workspace_id
+    delete insertPayload.workspace_code
     delete insertPayload.nonce
     if (nonce) {
       insertPayload.code_challenge = (codeChallenge || '') + `;nonce=${nonce}`

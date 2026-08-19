@@ -13,29 +13,39 @@ if (privateKeyPem) {
   const normalizedPem = privateKeyPem.replace(/\\n/g, '\n').trim()
   try {
     rsaPrivateKeyObj = crypto.createPrivateKey(normalizedPem)
-    // Always derive public key directly from private key so signing and JWKS cannot mismatch
     rsaPublicKeyObj = crypto.createPublicKey(rsaPrivateKeyObj)
   } catch (err: any) {
     console.error('[LAM ID SSO KEY ERROR] Failed to parse LAM_SSO_PRIVATE_KEY:', err.message)
   }
 }
 
-// Production Security Enforcement: FAIL CLOSED if persistent key is missing or invalid
-if (process.env.NODE_ENV === 'production' && (!rsaPrivateKeyObj || !rsaPublicKeyObj)) {
-  console.error('[LAM ID SSO FATAL] Persistent LAM_SSO_PRIVATE_KEY environment variable is missing or invalid in production. SSO token signing refused.')
+// Development / Test Fallback: Generate transient RSA keypair if missing in non-production environment
+if (!rsaPrivateKeyObj || !rsaPublicKeyObj) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[LAM ID SSO FATAL] Persistent LAM_SSO_PRIVATE_KEY environment variable is missing or invalid in production. SSO token signing refused.')
+  } else {
+    const keypair = crypto.generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+    })
+    rsaPrivateKeyObj = crypto.createPrivateKey(keypair.privateKey)
+    rsaPublicKeyObj = crypto.createPublicKey(keypair.publicKey)
+  }
 }
 
 export interface SsoTokenPayload {
   iss: string
-  sub: string // customer_id (LAM ID)
-  aud: string // client_id (e.g. lam_app_nexora)
-  email: string
-  given_name: string
+  sub: string // immutable LAM Login Identity UUID
+  aud: string // requesting client_id (e.g. lam_app_nexora)
+  workspace_id?: string | null
+  workspace_code?: string | null
+  product?: string | null
+  workspace_role?: string | null
+  organization_id?: string | null
+  email?: string | null
+  given_name?: string | null
   family_name?: string | null
-  company_id?: string | null
-  company_role?: string | null
-  products: string[] // Array of explicitly granted product slugs
-  is_nexora_platform_admin?: boolean
   scope?: string
   nonce?: string
   exp?: number

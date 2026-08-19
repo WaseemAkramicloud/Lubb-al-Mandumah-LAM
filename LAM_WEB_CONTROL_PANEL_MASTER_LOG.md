@@ -109,6 +109,7 @@ This section summarizes the **DEFINITIVE live architecture** as of **Stage 15 (2
 - **Stage B / Stage 19 (Central Identity & Control Plane Database Foundation)**: **Completed & Verified** (2026-08-19)
 - **Stage C / Stage 20 (Central Identity Engine & Dual Authentication Resolution)**: **Completed & Verified** (2026-08-19)
 - **Stage D / Stage 21 (LAM Access Web Hub, Owner Console & Strict Access Isolation)**: **Completed & Verified** (2026-08-19)
+- **Stage E / Stage 22 (Product Identity Contract, Token Claims & Multi-Client OIDC)**: **Completed & Verified** (2026-08-19)
 
 ---
 
@@ -600,6 +601,59 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
       7. Domain & OIDC product launch target resolution (`https://aimhighserp.lubbalmandumah.com`, `https://atom.lubbalmandumah.com`).
     - Re-ran Stage B and Stage C verification tests (`scripts/test-stage-b-integrity.ts` and `scripts/test-stage-c-authentication.ts`): All passed 100% cleanly.
   - **Production Build Verification**: `npm run build` compiled 100% cleanly across all 101 routes with 0 errors.
+
+---
+
+### Stage E: Product Identity Contract, Token Claims & Multi-Client OIDC (2026-08-19)
+- **Status**: Completed & Verified.
+- **What was implemented**:
+  - **Minimal Workspace-Scoped OIDC Token Claims**:
+    - Updated `SsoTokenPayload` interface and OIDC token issuer (`app/api/sso/token/route.ts`).
+    - Issued OIDC tokens contain ONLY minimal claims required by the requesting product/workspace:
+      - `sub`: immutable LAM Login Identity UUID (`customer_identities.id`).
+      - `iss`: `https://id.lubbalmandumah.com`
+      - `aud`: requesting product's client_id (`lam_app_nexora`, `lam_app_atom`, `lam_app_aimhighserp`, `lam_app_maams`).
+      - `workspace_id`: target product workspace UUID.
+      - `workspace_code`: target workspace code (`PPPXXXX`).
+      - `product`: requesting product slug (`nexora`, `atom`, `aimhighserp`, `maams`).
+      - `workspace_role`: workspace-scoped role (`owner`, `admin`, `member`).
+      - `email`, `given_name`, `family_name`, `nonce`, `exp`, `iat`, `jti`.
+    - **Zero Exposure**: Removed `products: string[]` portfolio array, `customer_account_code`, and unrelated organization data from product tokens.
+  - **Requesting-Product Isolation**:
+    - `verifySsoClientApp` and `/api/sso/authorize` enforce strict client/product matching.
+    - If `lam_app_nexora` requests tokens for an AimHighSERP workspace, request is rejected with `invalid_grant` / `product_mismatch`.
+    - `identity_mode = 'local_platform'` products (`pointo`, `amal`) are strictly excluded from central SSO authorization.
+  - **Narrowly Scoped Inter-Service Workspaces API (`/api/inter-service/workspaces`)**:
+    - Authenticates calling product via HMAC-SHA256 signature (`x-lam-signature`, `x-lam-timestamp`, `x-lam-nonce`).
+    - Validates `calling_client_id` against `lam_products`.
+    - Permits product to query ONLY its own known workspace IDs/codes.
+    - Rejects cross-product queries with `403 Forbidden` (`Cross-product access denied`).
+    - Returns minimal workspace status, active seat count, max seats, and plan tier (zero customer enumeration).
+  - **Generic RP-Initiated Logout Contract (`/api/auth/customer-signout`)**:
+    - Accepts `post_logout_redirect_uri`. Validates URI against registered product application domains (`app_url` in `lam_products`).
+    - Deactivates active customer session and redirects safely.
+  - **Canonical LAM Product Identity Contract Formalized**:
+    - Standard specification for all current and future `identity_mode = 'lam_sso'` products (`NEXORA`, `ATOM`, `AimHighSERP`, `MAAMS`, and future SaaS products).
+
+#### 📜 Canonical LAM Product Identity Contract Specification
+1. **OIDC Client Registration**: Product registers `client_id` in `lam_products` (`identity_mode = 'lam_sso'`) and `sso_applications` with registered redirect URIs (`https://<product>.lubbalmandumah.com/auth/callback`).
+2. **Authorization Flow**: PKCE S256 with Authorization Code flow. Mandatory parameters: `client_id`, `redirect_uri`, `response_type=code`, `code_challenge`, `code_challenge_method=S256`, `state`, `nonce`.
+3. **Token Verification**: RS256 signature verification against public JWKS endpoint (`https://id.lubbalmandumah.com/.well-known/jwks.json`). Audience check (`aud == client_id`), Issuer check (`iss == https://id.lubbalmandumah.com`).
+4. **Product-Side Identity Projection**: Child products project local user table mapping: `lam_login_identity_id`, `lam_workspace_id`, `tenant_id`, `local_role`, `status`. Products MUST NEVER store LAM passwords, internal Supabase auth aliases, or LAM private signing keys.
+5. **Database Isolation**: Provisioning operates exclusively via signed inter-service REST APIs (`/api/inter-service/provisioning`). No cross-database writes or queries.
+6. **Desktop Launcher Compatibility**: Standard PKCE S256 Authorization Code flow is 100% compatible with future native desktop apps (`https://id.lubbalmandumah.com/api/sso/authorize` via loopback or custom URI scheme).
+
+- **Verification Testing (`scripts/test-stage-e-oidc-contract.ts`)**:
+  - Executed automated test suite verifying all 6 required Stage E test scenarios:
+    1. Minimal workspace-scoped token claims specification.
+    2. Requesting product isolation & mismatch enforcement.
+    3. RS256 asymmetric key signature & JWKS public key endpoint verification.
+    4. PKCE S256, state, and nonce parameter regression.
+    5. Non-SSO local platform products isolation (PointO & AMAL rejected).
+    6. HMAC-secured inter-service workspaces API verification (replay protection & cross-product query rejection).
+  - Re-ran Stage B (`test-stage-b-integrity.ts`), Stage C (`test-stage-c-authentication.ts`), and Stage D (`test-stage-d-isolation.ts`) verification suites: All passed 100% cleanly.
+- **Production Build Verification**: `npm run build` compiled 100% cleanly across all 102 routes with 0 errors.
+
 
 
 

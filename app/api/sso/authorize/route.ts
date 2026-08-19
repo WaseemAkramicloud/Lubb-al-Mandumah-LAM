@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   const clientId = searchParams.get('client_id')
   const redirectUri = searchParams.get('redirect_uri')
   const productSlug = searchParams.get('product') || searchParams.get('scope')?.split(' ').find(s => s.startsWith('product:'))?.replace('product:', '') || ''
+  const requestedWorkspaceCode = searchParams.get('workspace') || searchParams.get('workspace_code') || ''
   const responseType = searchParams.get('response_type') || 'code'
   const state = searchParams.get('state') || ''
   const codeChallenge = searchParams.get('code_challenge') || ''
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     }, { status: 400 })
   }
 
-  // 1. Verify Client Application
+  // 1. Verify Client Application & Product Identity Mode
   const appCheck = await verifySsoClientApp(clientId, redirectUri)
   if (!appCheck.valid) {
     return NextResponse.json({ error: 'invalid_client', error_description: appCheck.error }, { status: 400 })
@@ -34,47 +35,61 @@ export async function GET(request: NextRequest) {
 
   const targetProduct = productSlug || appCheck.app.product_slug || 'nexora'
 
+  // REQUESTING PRODUCT ISOLATION: Verify client_id matches target product
+  if (appCheck.app.product_slug && appCheck.app.product_slug !== targetProduct) {
+    return NextResponse.json({
+      error: 'invalid_grant',
+      error_description: `Client ID '${clientId}' belongs to ${appCheck.app.product_slug.toUpperCase()}, which cannot authorize requests for ${targetProduct.toUpperCase()}.`
+    }, { status: 400 })
+  }
+
   // 2. Check Customer Authentication Session
   const customer = await getCurrentCustomer()
   if (!customer) {
     // Redirect to central LAM ID Login page with return URL
     const loginUrl = new URL('/id/login', request.url)
     loginUrl.searchParams.set('redirect_to', request.nextUrl.pathname + request.nextUrl.search)
+    loginUrl.searchParams.set('product', targetProduct)
     return NextResponse.redirect(loginUrl)
   }
 
-  // 3. Multi-Layered Product Access Verification (LAM ID decides WHETHER user may enter)
-  const accessCheck = await validateCustomerProductAccess(customer.id, targetProduct)
+  // 3. Multi-Layered Product & Workspace Access Verification
+  const accessCheck = await validateCustomerProductAccess(customer.id, targetProduct, requestedWorkspaceCode)
 
   if (!accessCheck.allowed) {
     await logCustomerAudit(customer.id, null, 'sso_access_denied', {
       client_id: clientId,
       product: targetProduct,
+      workspaceCode: requestedWorkspaceCode,
       reason: accessCheck.reason
     })
 
-    // Redirect to LAM ID Login with access denied message
     const deniedUrl = new URL('/id/login', request.url)
     deniedUrl.searchParams.set('error', 'access_denied')
-    deniedUrl.searchParams.set('error_description', accessCheck.reason || 'Access denied to this product.')
+    deniedUrl.searchParams.set('error_description', accessCheck.reason || 'Access denied to this product workspace.')
     return NextResponse.redirect(deniedUrl)
   }
 
-  // 4. Generate Short-Lived Authorization Code
+  const workspace = accessCheck.workspace
+
+  // 4. Generate Short-Lived Authorization Code with Workspace Context
   const code = await createAuthorizationCode(
     clientId,
     customer.id,
     redirectUri,
-    accessCheck.company?.id,
+    workspace?.customer_account_id || accessCheck.company?.id,
     'openid profile email',
     codeChallenge,
     codeChallengeMethod,
-    nonce
+    nonce,
+    workspace?.id,
+    workspace?.workspace_code
   )
 
-  await logCustomerAudit(customer.id, accessCheck.company?.id, 'sso_authorize_granted', {
+  await logCustomerAudit(customer.id, workspace?.customer_account_id, 'sso_authorize_granted', {
     client_id: clientId,
-    product: targetProduct
+    product: targetProduct,
+    workspaceCode: workspace?.workspace_code
   })
 
   // 5. Redirect back to Child SaaS application callback URL

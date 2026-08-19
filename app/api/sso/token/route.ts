@@ -56,56 +56,85 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'invalid_grant', error_description: 'Customer account suspended or unavailable' }, { status: 400 })
     }
 
-    // 2. Fetch Granted Products for Customer in this Company
-    let grantedProducts: string[] = []
-    let companyRole = 'member'
-
-    if (authCode.company_id) {
-      const { data: accessRows } = await supabase
-        .from('customer_product_access')
-        .select('product_slug')
-        .eq('customer_id', customer.id)
-        .eq('company_id', authCode.company_id)
-        .eq('status', 'active')
-
-      grantedProducts = (accessRows || []).map(r => r.product_slug)
-
-      const { data: mem } = await supabase
-        .from('customer_company_memberships')
-        .select('company_role')
-        .eq('customer_id', customer.id)
-        .eq('company_id', authCode.company_id)
-        .maybeSingle()
-
-      if (mem) companyRole = mem.company_role
-    }
-
-    // 3. Check if user is a NEXORA platform administrator
-    const { data: adminGrant } = await supabase
-      .from('nexora_platform_admins')
-      .select('id')
-      .eq('customer_id', customer.id)
-      .eq('status', 'active')
+    // 2. Resolve Product Registry Info & Requesting Product Isolation
+    const { data: prod } = await supabase
+      .from('lam_products')
+      .select('*')
+      .eq('client_id', client_id)
       .maybeSingle()
 
-    // Extract nonce from dedicated authCode.nonce property or challenge metadata
+    if (prod && prod.identity_mode !== 'lam_sso') {
+      return NextResponse.json({ error: 'invalid_client', error_description: `Product '${prod.name}' does not participate in central LAM SSO.` }, { status: 400 })
+    }
+
+    const productSlug = prod?.slug || 'nexora'
+
+    // 3. Resolve Workspace Role Context
+    let workspaceRole = 'member'
+    let workspaceId = authCode.workspace_id
+    let workspaceCode = authCode.workspace_code
+    let organizationId: string | null = null
+
+    if (workspaceId) {
+      const { data: ws } = await supabase
+        .from('lam_product_workspaces')
+        .select('id, workspace_code, product_slug, organization_id')
+        .eq('id', workspaceId)
+        .single()
+
+      if (ws) {
+        organizationId = ws.organization_id
+        if (ws.product_slug !== productSlug) {
+          return NextResponse.json({
+            error: 'invalid_grant',
+            error_description: `Workspace Code '${workspaceCode}' belongs to ${ws.product_slug.toUpperCase()}, which cannot be authorized for ${productSlug.toUpperCase()}.`
+          }, { status: 400 })
+        }
+
+        const { data: mem } = await supabase
+          .from('lam_workspace_memberships')
+          .select('workspace_role, status')
+          .eq('workspace_id', ws.id)
+          .eq('customer_id', customer.id)
+          .maybeSingle()
+
+        if (mem && mem.status === 'active') {
+          workspaceRole = mem.workspace_role
+        } else {
+          // Check if Company Owner
+          const { data: ownerMem } = await supabase
+            .from('customer_company_memberships')
+            .select('company_role')
+            .eq('customer_id', customer.id)
+            .eq('status', 'active')
+            .maybeSingle()
+
+          if (ownerMem && ['owner', 'admin'].includes(ownerMem.company_role)) {
+            workspaceRole = 'owner'
+          }
+        }
+      }
+    }
+
+    // Extract nonce
     let nonceVal: string | undefined = (authCode as any).nonce
     if (!nonceVal && authCode.code_challenge && authCode.code_challenge.includes(';nonce=')) {
       const parts = authCode.code_challenge.split(';nonce=')
       nonceVal = parts[1]
     }
 
-    // 4. Issue Signed OIDC JWT ID Token & Access Token
+    // 4. Issue Minimal, Workspace-Scoped OIDC JWT ID Token & Access Token
     const tokenPayload = {
-      sub: customer.id,
-      aud: client_id,
-      email: customer.email,
+      sub: customer.id, // immutable LAM Login Identity UUID
+      aud: client_id, // requesting client_id
+      workspace_id: workspaceId || null,
+      workspace_code: workspaceCode || null,
+      product: productSlug,
+      workspace_role: workspaceRole,
+      organization_id: organizationId || null,
+      email: customer.email && !customer.email.endsWith('@users.lam.internal') ? customer.email : null,
       given_name: customer.first_name || 'User',
       family_name: customer.last_name || null,
-      company_id: authCode.company_id,
-      company_role: companyRole,
-      products: grantedProducts,
-      is_nexora_platform_admin: !!adminGrant,
       nonce: nonceVal || undefined,
       exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour token
     }
@@ -113,7 +142,11 @@ export async function POST(request: NextRequest) {
     const idToken = signSsoJwt(tokenPayload, 3600)
     const accessToken = signSsoJwt({ ...tokenPayload, scope: 'access_token' }, 3600)
 
-    await logCustomerAudit(customer.id, authCode.company_id, 'sso_token_issued', { client_id })
+    await logCustomerAudit(customer.id, authCode.company_id, 'sso_token_issued', {
+      client_id,
+      product: productSlug,
+      workspaceCode
+    })
 
     return NextResponse.json({
       access_token: accessToken,
