@@ -27,7 +27,7 @@ export default function OnboardingForm({ products = [] }: Props) {
   const [showInitialPwd, setShowInitialPwd] = useState(false)
 
   // Filter products to ONLY identity_mode = 'lam_sso'
-  const eligibleProducts = products.filter(p => p.identity_mode === 'lam_sso' || !p.identity_mode || ['nexora', 'atom', 'aimhighserp', 'maams'].includes(p.slug))
+  const eligibleProducts = products.filter(p => p.identity_mode === 'lam_sso' && !['pointo', 'amal'].includes(p.slug.toLowerCase()))
 
   // Form field state
   const [formData, setFormData] = useState({

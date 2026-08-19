@@ -12,11 +12,27 @@ export default async function OnboardCustomerPage() {
   await requirePermission('leads_clients', 'edit')
 
   const adminClient = getSupabaseAdmin()
-  const { data: products } = await adminClient
+  const { data: lamProducts } = await adminClient
+    .from('lam_products')
+    .select('slug, name, identity_mode, status')
+    .eq('identity_mode', 'lam_sso')
+    .eq('status', 'active')
+    .order('name')
+
+  const { data: cmsProducts } = await adminClient
     .from('cms_products')
     .select('slug, name, product_id, lifecycle_status, restricted')
-    .eq('lifecycle_status', 'Active')
-    .order('name')
+
+  const products = (lamProducts || []).map(lp => {
+    const cmsP = cmsProducts?.find(cp => cp.slug === lp.slug)
+    return {
+      slug: lp.slug,
+      name: lp.name || cmsP?.name || lp.slug.toUpperCase(),
+      product_id: cmsP?.product_id,
+      restricted: cmsP?.restricted,
+      identity_mode: lp.identity_mode
+    }
+  })
 
   return (
     <div>

@@ -738,6 +738,9 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
   12. **Full Multi-Stage Regression Suite & Production Build (Item 14)**:
      - Executed Stage B (`test-stage-b-integrity.ts`), Stage C (`test-stage-c-authentication.ts`), Stage D (`test-stage-d-isolation.ts`), Stage E (`test-stage-e-oidc-contract.ts`), Stage F (`test-stage-f-onboarding.ts`), and Stage G (`test-stage-g-final-acceptance.ts`): All passed 100% cleanly.
      - `npm run build` compiled 100% cleanly across all 102 production routes with 0 errors.
+  13. **Onboarding UI Product Dropdown Correction**:
+     - Corrected `app/control-panel/modules/ecosystem/companies/new/page.tsx` and `OnboardingForm.tsx` to load products dynamically from `lam_products` filtered strictly by `identity_mode = 'lam_sso'` and `status = 'active'`.
+     - PointO and AMAL (`identity_mode = 'local_platform'`) are 100% removed from the onboarding dropdown surface. Future `lam_sso` products will automatically populate dynamically.
 
 
 
