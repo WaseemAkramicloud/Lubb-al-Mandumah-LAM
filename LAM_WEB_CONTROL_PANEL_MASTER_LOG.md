@@ -110,6 +110,7 @@ This section summarizes the **DEFINITIVE live architecture** as of **Stage 15 (2
 - **Stage C / Stage 20 (Central Identity Engine & Dual Authentication Resolution)**: **Completed & Verified** (2026-08-19)
 - **Stage D / Stage 21 (LAM Access Web Hub, Owner Console & Strict Access Isolation)**: **Completed & Verified** (2026-08-19)
 - **Stage E / Stage 22 (Product Identity Contract, Token Claims & Multi-Client OIDC)**: **Completed & Verified** (2026-08-19)
+- **Stage F / Stage 23 (Full Control Plane & End-to-End SSO Verification)**: **Completed & Verified** (2026-08-19)
 
 ---
 
@@ -653,6 +654,34 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
     6. HMAC-secured inter-service workspaces API verification (replay protection & cross-product query rejection).
   - Re-ran Stage B (`test-stage-b-integrity.ts`), Stage C (`test-stage-c-authentication.ts`), and Stage D (`test-stage-d-isolation.ts`) verification suites: All passed 100% cleanly.
 - **Production Build Verification**: `npm run build` compiled 100% cleanly across all 102 routes with 0 errors.
+
+---
+
+### Stage F: Full Control Plane & End-to-End SSO Verification (2026-08-19)
+- **Status**: Completed & Verified.
+- **What was implemented**:
+  - **OIDC Discovery & Metadata Synchronization (`/.well-known/openid-configuration`)**:
+    - Updated discovery document with Stage E minimal workspace-scoped claims specification (`sub`, `iss`, `aud`, `workspace_id`, `workspace_code`, `product`, `workspace_role`, `organization_id`, `email`, `given_name`, `family_name`, `nonce`, `exp`, `iat`, `jti`).
+    - Exposes endpoints: authorization (`/api/sso/authorize`), token (`/api/sso/token`), userinfo (`/api/sso/userinfo`), jwks (`/.well-known/jwks.json`), and end_session (`/api/auth/customer-signout`).
+  - **Strict Security Mandates Preserved**:
+    - **Production RS256 Fail-Closed**: In production (`NODE_ENV === 'production'`), if `LAM_SSO_PRIVATE_KEY` is missing or invalid, token signing fails closed with zero ephemeral fallback.
+    - **Synthetic Auth Alias Encapsulation**: `@users.lam.internal` email aliases are strictly filtered out and NEVER emitted as `email` in tokens, UserInfo responses, API outputs, or UI screens.
+  - **Canonical Custom Subdomains Alignment**:
+    - `https://id.lubbalmandumah.com` — LAM Central Identity & OIDC Issuer
+    - `https://access.lubbalmandumah.com` — LAM Access Web Hub & Owner Console
+    - `https://nexora.lubbalmandumah.com` — NEXORA
+    - `https://atom.lubbalmandumah.com` — ATOM
+    - `https://aimhighserp.lubbalmandumah.com` — AimHighSERP
+    - `https://maams.lubbalmandumah.com` — MAAMS
+  - **Verification Testing (`scripts/test-stage-f-end-to-end.ts`)**:
+    - Executed automated test suite verifying all 4 required Stage F test scenarios:
+      1. Synthetic Auth Alias Encapsulation (`@users.lam.internal` token email claim is `null`).
+      2. End-to-end Authorization Code + PKCE S256 flow.
+      3. Production fail-closed RS256 & public JWKS endpoint verification.
+      4. Canonical subdomains alignment.
+    - Re-ran Stage B (`test-stage-b-integrity.ts`), Stage C (`test-stage-c-authentication.ts`), Stage D (`test-stage-d-isolation.ts`), and Stage E (`test-stage-e-oidc-contract.ts`) test suites: All passed 100% cleanly.
+  - **Production Build Verification**: `npm run build` compiled 100% cleanly across all 102 routes with 0 errors.
+
 
 
 
