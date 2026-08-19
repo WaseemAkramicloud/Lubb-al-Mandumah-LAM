@@ -106,6 +106,7 @@ This section summarizes the **DEFINITIVE live architecture** as of **Stage 15 (2
 - **Stage 13 (Customer Accounts Profile CRUD & Details 404 Resolution)**: **Completed & Verified** (2026-08-15)
 - **Stage 14 (Control Panel Structure, Client Management & CMS Refinement)**: **Completed & Verified** (2026-08-15)
 - **Stage 15 (Route Consolidation, Client Management & Legacy UI Stabilisation)**: **Completed & Verified** (2026-08-15)
+- **Stage B / Stage 19 (Central Identity & Control Plane Database Foundation)**: **Completed & Verified** (2026-08-19)
 
 ---
 
@@ -511,4 +512,27 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
   - **Read-Only Audit**: Performed read-only audit of remaining database records (`scripts/audit-remaining-client-users.ts`), identifying 4 unassigned/orphaned identities without altering data.
   - **Audit Logging**: Recorded events in `customer_audit_logs` (`customer_user_archived`, `customer_user_restored`, `customer_user_password_reset`, `customer_user_membership_removed`, `customer_user_deletion_blocked`, `customer_user_deleted`).
   - **Verification & Build**: Tested synthetic user management via `scripts/test-client-user-controls.ts`. `npm run build` compiled cleanly with 0 errors across 63 routes.
+
+---
+
+### Stage B: Central Control Plane Database & Domain Model Foundation (2026-08-19)
+- **Status**: Completed & Verified.
+- **What was implemented**:
+  - **Central Product Registry (`lam_products`)**: Created table and populated canonical SaaS products with workspace prefixes (`NEXORA` → `NEX`, `ATOM` → `ATO`, `AimHighSERP` → `AHS`, `MAAMS` → `MAA`, `PointO` → `POI`, `AMAL` → `AMA`).
+  - **LAM Customer Accounts (`lam_customer_accounts`)**: Created commercial client account table with human-readable account code sequence (`LAM-CA-000001`).
+  - **LAM Organizations (`lam_organizations`)**: Created operational business unit table with organization code sequence (`LAM-ORG-000001`).
+  - **LAM Product Workspaces (`lam_product_workspaces`)**: Created product workspace table (`one organization + one product`) with `PPPXXXX` workspace code generator (4 random uppercase alphanumeric characters excluding ambiguous `O`, `0`, `I`, `1`, `L`) and case-insensitive unique constraint on `LOWER(workspace_code)`.
+  - **LAM Workspace Memberships (`lam_workspace_memberships`)**: Created user workspace membership table mapping `LAM User UUID` (`customer_identities.id`) to product workspaces with scoped `user_id` and role (`owner`, `admin`, `member`), enforcing case-insensitive uniqueness on `(workspace_id, LOWER(user_id))`.
+  - **Additive Schema & Coexistence**: Added `customer_account_id` & `organization_id` FKs to `crm_companies`, and `workspace_id` FKs to `customer_product_entitlements`, `customer_product_instances`, and `customer_product_access`. Zero legacy tables dropped. Zero existing UUIDs or passwords altered.
+  - **Post-Migration Integrity Verification**: Applied migration `20260819000001_lam_central_identity_control_plane.sql` directly to Supabase production host `aws-1-eu-west-1.pooler.supabase.com:6543`. Reloaded PostgREST schema cache.
+  - **Functional & Integrity Testing**: Executed `scripts/test-stage-b-integrity.ts` verifying multi-organization customer accounts, workspace code generation, case-insensitive collision rejection, global owner identity mapping, and clean synthetic data cleanup.
+  - **Production Build Verification**: `npm run build` compiled 100% cleanly across all 101 routes with 0 errors.
+- **Rollback / Recovery Approach**: Migration is 100% additive DDL with `IF NOT EXISTS` guards. Rollback (if ever required) involves dropping new tables (`lam_workspace_memberships`, `lam_product_workspaces`, `lam_organizations`, `lam_customer_accounts`, `lam_products`) and removing additive FK columns. Legacy tables remain completely untouched.
+- **Proposed Stage C Authentication Design**:
+  - Implement dual-entry authentication resolution in `lib/actions/customer-auth.ts`:
+    - Entry 1 (Owner Access): `Email / User ID` + `Password`.
+    - Entry 2 (Employee Workspace Access): `Workspace Code` + `User ID` + `Password`.
+  - Create server-side identity resolver function `resolveWorkspaceUserIdentity(workspaceCode, userId)` returning linked `LAM User UUID` and credentials context.
+  - Perform Supabase Auth password verification against single central `auth.users` store without storing passwords in product DBs or exposing internal synthetic email details to users.
+
 
