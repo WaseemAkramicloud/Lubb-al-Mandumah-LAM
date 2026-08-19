@@ -47,11 +47,11 @@ export function IntroSection({ data }: { data?: Record<string, unknown> | null }
       >
         {(cards as Record<string, string>[]).map((card, index: number) => (
           <div key={index} className="lam-card">
-            <p style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem" }}>
+            <p style={{ fontSize: "var(--text-xs)", fontWeight: 700, color: "#1D4ED8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem" }}>
               {card.eyebrow}
             </p>
-            <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.85rem", color: "var(--lam-dark-text)" }}>{card.title}</h3>
-            <p style={{ color: "var(--lam-dark-text-muted)", lineHeight: 1.6, fontSize: "var(--text-sm)" }}>
+            <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.85rem", color: "#0F172A" }}>{card.title}</h3>
+            <p style={{ color: "#334155", lineHeight: 1.6, fontSize: "var(--text-sm)" }}>
               {card.description}
             </p>
           </div>

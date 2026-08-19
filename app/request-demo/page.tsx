@@ -24,11 +24,11 @@ export default async function RequestDemoPage(props: { searchParams: Promise<{ [
         subtitle={heroData.subtitle || "Schedule a personalized demonstration of LΛM platforms tailored to your organizational scale and specific operational challenges."}
       />
 
-      <SectionContainer background="black" size="lg">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "4rem", maxWidth: "800px", margin: "0 auto" }}>
+      <SectionContainer background="light" size="lg">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "3rem", maxWidth: "800px", margin: "0 auto" }}>
           
-          <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-            <p style={{ color: "var(--lam-silver)", fontSize: "var(--text-lg)", lineHeight: 1.6 }}>
+          <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+            <p style={{ color: "#334155", fontSize: "var(--text-lg)", lineHeight: 1.65 }}>
               Please provide accurate professional details to help us match you with the appropriate product specialist.
             </p>
           </div>

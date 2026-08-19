@@ -48,7 +48,7 @@ export default async function InsightsPage({ searchParams }: Props) {
         subtitle={heroData.subtitle || routeMeta.subtitle}
       />
 
-      <SectionContainer background="black" size="lg">
+      <SectionContainer background="light" size="lg">
         {(!insights || insights.length === 0) ? (
           <div style={{ padding: "4rem 0", textAlign: "center" }}>
             <p style={{ color: "var(--lam-silver)", fontSize: "var(--text-lg)" }}>

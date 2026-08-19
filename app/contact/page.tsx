@@ -25,7 +25,7 @@ export default async function ContactPage(props: { searchParams: Promise<{ [key:
         subtitle={heroData.subtitle || "Reach out to our global teams for corporate inquiries, partnership opportunities, or technical support."}
       />
 
-      <SectionContainer background="black" size="lg">
+      <SectionContainer background="light" size="lg">
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "4rem", maxWidth: "1200px", margin: "0 auto" }}>
           
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "4rem", alignItems: "start" }}>
@@ -34,36 +34,36 @@ export default async function ContactPage(props: { searchParams: Promise<{ [key:
               {officesData.offices && officesData.offices.length > 0 ? (
                 officesData.offices.map((office: any, index: number) => (
                   <div key={index}>
-                    <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.5rem" }}>{office.city}</h3>
-                    <p style={{ color: "var(--lam-silver)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                    <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.5rem", color: "#0F172A" }}>{office.city}</h3>
+                    <p style={{ color: "#334155", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
                       {office.address}
                     </p>
-                    <p style={{ color: "var(--lam-silver-light)", marginTop: "0.5rem" }}>
-                      <a href={`tel:${office.phone}`} style={{ color: "var(--lam-gold)", textDecoration: "none" }}>{office.phone}</a><br />
-                      <a href={`mailto:${office.email}`} style={{ color: "var(--lam-silver)", textDecoration: "none" }}>{office.email}</a>
+                    <p style={{ color: "#334155", marginTop: "0.5rem" }}>
+                      <a href={`tel:${office.phone}`} style={{ color: "#1D4ED8", textDecoration: "none", fontWeight: 600 }}>{office.phone}</a><br />
+                      <a href={`mailto:${office.email}`} style={{ color: "#1D4ED8", textDecoration: "none", fontWeight: 600 }}>{office.email}</a>
                     </p>
                   </div>
                 ))
               ) : (
                 <>
                   <div>
-                    <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.5rem" }}>Corporate Headquarters</h3>
-                    <p style={{ color: "var(--lam-silver)", lineHeight: 1.6 }}>
+                    <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.5rem", color: "#0F172A" }}>Corporate Headquarters</h3>
+                    <p style={{ color: "#334155", lineHeight: 1.65 }}>
                       Global operations are coordinated from our central offices. Meetings are strictly by appointment only.
                     </p>
                   </div>
                   <div>
-                    <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.5rem" }}>Secure Communications</h3>
-                    <p style={{ color: "var(--lam-silver)", lineHeight: 1.6 }}>
+                    <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.5rem", color: "#0F172A" }}>Secure Communications</h3>
+                    <p style={{ color: "#334155", lineHeight: 1.65 }}>
                       For institutional clients requiring encrypted channels, please select &quot;Institutional Inquiry&quot; in the form to receive our PGP public keys.
                     </p>
                   </div>
                 </>
               )}
               
-              <div className="lam-card lam-card--flat" style={{ marginTop: "1rem" }}>
-                <h4 style={{ color: "var(--lam-gold)", marginBottom: "0.5rem", fontSize: "var(--text-sm)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Support Routing</h4>
-                <p style={{ color: "var(--lam-silver)", fontSize: "var(--text-sm)", lineHeight: 1.5 }}>
+              <div className="lam-card" style={{ marginTop: "1rem" }}>
+                <h4 style={{ color: "#1D4ED8", marginBottom: "0.5rem", fontSize: "var(--text-sm)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Support Routing</h4>
+                <p style={{ color: "#334155", fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
                   Existing clients should submit support tickets directly through their secure internal Control Hub for SLA-compliant response times.
                 </p>
               </div>

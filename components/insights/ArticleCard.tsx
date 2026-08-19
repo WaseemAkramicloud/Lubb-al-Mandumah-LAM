@@ -6,7 +6,6 @@ interface ArticleCardProps {
 }
 
 export function ArticleCard({ article }: ArticleCardProps) {
-  // Format date elegantly
   const dateObj = new Date(article.date);
   const formattedDate = new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -17,30 +16,30 @@ export function ArticleCard({ article }: ArticleCardProps) {
   return (
     <div className="lam-card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-        <span className="lam-eyebrow" style={{ color: "var(--lam-gold)", margin: 0 }}>
+        <span style={{ fontSize: "var(--text-xs)", fontWeight: 700, color: "#1D4ED8", textTransform: "uppercase", letterSpacing: "0.06em" }}>
           {article.category}
         </span>
-        <span style={{ fontSize: "var(--text-xs)", color: "var(--lam-silver)" }}>
+        <span style={{ fontSize: "var(--text-xs)", color: "#475569", fontWeight: 500 }}>
           {formattedDate}
         </span>
       </div>
       
-      <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "1rem", lineHeight: 1.3 }}>
-        <Link href={`/insights/${article.id}`} style={{ color: "inherit", textDecoration: "none" }}>
+      <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.85rem", lineHeight: 1.35, color: "#0F172A" }}>
+        <Link href={`/insights/${article.id}`} style={{ color: "#0F172A", textDecoration: "none" }}>
           {article.title}
         </Link>
       </h3>
       
-      <p style={{ color: "var(--lam-silver-light)", lineHeight: 1.6, marginBottom: "2rem", flex: 1 }}>
+      <p style={{ color: "#334155", lineHeight: 1.65, marginBottom: "1.75rem", flex: 1, fontSize: "var(--text-sm)" }}>
         {article.excerpt}
       </p>
       
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--lam-border)", paddingTop: "1rem" }}>
-        <span style={{ fontSize: "var(--text-sm)", color: "var(--lam-silver)", fontWeight: 500 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #CBD5E1", paddingTop: "1rem" }}>
+        <span style={{ fontSize: "var(--text-xs)", color: "#475569", fontWeight: 500 }}>
           {article.author}
         </span>
-        <Link href={`/insights/${article.id}`} style={{ color: "var(--lam-gold)", fontWeight: 600, fontSize: "var(--text-sm)", textDecoration: "none" }}>
-          Read Article →
+        <Link href={`/insights/${article.id}`} style={{ color: "#1D4ED8", fontWeight: 600, fontSize: "var(--text-sm)", textDecoration: "none" }}>
+          Read Article &rarr;
         </Link>
       </div>
     </div>

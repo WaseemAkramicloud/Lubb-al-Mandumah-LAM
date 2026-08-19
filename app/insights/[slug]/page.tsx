@@ -47,39 +47,39 @@ export default async function InsightDetailPage({ params }: Props) {
     <>
       <div
         style={{
-          paddingTop: "calc(var(--header-height) + 4rem)",
-          paddingBottom: "4rem",
-          background: "var(--lam-gradient-hero)",
-          borderBottom: "1px solid var(--lam-border)",
+          paddingTop: "calc(var(--header-height) + 3rem)",
+          paddingBottom: "3rem",
+          background: "linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)",
+          borderBottom: "1px solid #CBD5E1",
         }}
       >
         <div className="lam-container" style={{ maxWidth: "800px", margin: "0 auto" }}>
-          <div style={{ display: "flex", gap: "1rem", alignItems: "center", marginBottom: "1.5rem" }}>
-            <span className="lam-eyebrow" style={{ color: "var(--lam-gold)", margin: 0 }}>
+          <div style={{ display: "flex", gap: "1rem", alignItems: "center", marginBottom: "1.25rem" }}>
+            <span style={{ fontSize: "var(--text-xs)", fontWeight: 700, color: "#1D4ED8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               {article.category}
             </span>
-            <span style={{ color: "var(--lam-silver-light)", fontSize: "var(--text-sm)" }}>
+            <span style={{ color: "#475569", fontSize: "var(--text-sm)", fontWeight: 500 }}>
               {formattedDate}
             </span>
           </div>
           
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.5rem, 5vw, 4rem)", marginBottom: "1.5rem", lineHeight: 1.1 }}>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.25rem, 4.5vw, 3.75rem)", marginBottom: "1.25rem", lineHeight: 1.15, color: "#0F172A" }}>
             {article.title}
           </h1>
           
-          <p style={{ fontSize: "var(--text-xl)", color: "var(--lam-silver)", marginBottom: "2rem" }}>
+          <p style={{ fontSize: "var(--text-base)", color: "#475569", fontWeight: 600 }}>
             By {article.author}
           </p>
         </div>
       </div>
 
-      <SectionContainer background="black" size="lg">
+      <SectionContainer background="light" size="lg">
         <div 
           className="lam-article-content"
           style={{ 
             maxWidth: "800px", 
             margin: "0 auto",
-            color: "var(--lam-silver-light)",
+            color: "#334155",
             fontSize: "var(--text-lg)",
             lineHeight: 1.8
           }}
@@ -87,17 +87,24 @@ export default async function InsightDetailPage({ params }: Props) {
         />
       </SectionContainer>
       
-      {/* Basic styles for the injected HTML content */}
+      {/* High contrast styles for injected HTML content */}
       <style dangerouslySetInnerHTML={{
         __html: `
           .lam-article-content h2 {
             font-size: var(--text-2xl);
-            color: var(--lam-white);
-            margin-top: 3rem;
-            margin-bottom: 1.5rem;
+            color: #0F172A;
+            margin-top: 2.5rem;
+            margin-bottom: 1.25rem;
+            font-family: var(--font-display);
           }
           .lam-article-content p {
             margin-bottom: 1.5rem;
+            color: #334155;
+          }
+          .lam-article-content ul, .lam-article-content ol {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+            color: #334155;
           }
         `
       }} />

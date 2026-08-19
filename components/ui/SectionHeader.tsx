@@ -35,17 +35,17 @@ export function SectionHeader({
         <p
           style={{
             fontSize: "var(--text-xs)",
-            fontWeight: 600,
+            fontWeight: 700,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: "#2563EB",
+            color: isLight ? "#1D4ED8" : "#38BDF8",
             marginBottom: "0.6rem",
           }}
         >
           {eyebrow}
         </p>
       )}
-      <div className="lam-accent-line" style={align === "center" ? { margin: "0 auto 1rem" } : { marginBottom: "1rem" }} />
+      <div className="lam-accent-line" style={{ background: isLight ? "#1D4ED8" : "#38BDF8", ...(align === "center" ? { margin: "0 auto 1rem" } : { marginBottom: "1rem" }) }} />
       <h2
         style={{
           fontFamily: "var(--font-display)",
@@ -62,7 +62,7 @@ export function SectionHeader({
         <p
           style={{
             fontSize: "var(--text-base)",
-            color: isLight ? "#475569" : "rgba(255,255,255,0.85)",
+            color: isLight ? "#475569" : "#CBD5E1",
             lineHeight: 1.65,
             maxWidth: "620px",
             ...(align === "center" ? { marginInline: "auto" } : {}),

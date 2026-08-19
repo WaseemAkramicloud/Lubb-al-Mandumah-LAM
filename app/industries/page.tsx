@@ -29,7 +29,7 @@ export default async function IndustriesPage() {
         subtitle={heroData.subtitle || routeMeta.subtitle}
       />
 
-      <SectionContainer background="black" size="lg">
+      <SectionContainer background="light" size="lg">
         <div
           style={{
             display: "grid",

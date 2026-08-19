@@ -71,19 +71,19 @@ export default async function IndustryDetailPage({ params }: Props) {
         subtitle={industry.description}
       />
 
-      <SectionContainer background="black" size="lg">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "4rem", maxWidth: "1000px", margin: "0 auto" }}>
+      <SectionContainer background="light" size="lg">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "3.5rem", maxWidth: "1000px", margin: "0 auto" }}>
           
           <div>
-            <h2 style={{ fontSize: "var(--text-2xl)", marginBottom: "2rem" }}>Sector Challenges & Needs</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem" }}>
+            <h2 style={{ fontSize: "var(--text-2xl)", marginBottom: "1.5rem", color: "#0F172A" }}>Sector Challenges & Needs</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
               {industry.commonNeeds.map((need, i) => (
-                <div key={i} className="lam-card lam-card--flat">
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-                    <div style={{ width: "8px", height: "8px", background: "var(--lam-gold)", borderRadius: "50%" }} />
-                    <span style={{ fontWeight: 600 }}>Challenge 0{i + 1}</span>
+                <div key={i} className="lam-card">
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                    <div style={{ width: "6px", height: "6px", background: "#1D4ED8", borderRadius: "50%" }} />
+                    <span style={{ fontWeight: 700, fontSize: "var(--text-xs)", color: "#1D4ED8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Challenge 0{i + 1}</span>
                   </div>
-                  <p style={{ color: "var(--lam-silver-light)", fontSize: "var(--text-sm)", lineHeight: 1.5 }}>
+                  <p style={{ color: "#334155", fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
                     {need}
                   </p>
                 </div>
@@ -91,16 +91,16 @@ export default async function IndustryDetailPage({ params }: Props) {
             </div>
           </div>
 
-          <div className="lam-divider" />
+          <div className="lam-divider" style={{ borderColor: "#CBD5E1" }} />
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "3rem" }}>
             <div>
-              <h2 style={{ fontSize: "var(--text-2xl)", marginBottom: "1.5rem" }}>Our Approach</h2>
-              <p style={{ color: "var(--lam-silver-light)", lineHeight: 1.6, marginBottom: "1.5rem" }}>
+              <h2 style={{ fontSize: "var(--text-2xl)", marginBottom: "1.25rem", color: "#0F172A" }}>Our Approach</h2>
+              <p style={{ color: "#334155", lineHeight: 1.65, marginBottom: "2rem" }}>
                 LΛM understands the unique constraints and scale of the {industry.name.toLowerCase()} sector. We deploy robust, compliant, and highly interoperable software platforms that solve domain-specific problems without compromising security or architectural integrity.
               </p>
-              <Link href={ctaHref} className="btn btn-primary">
-                {ctaText}
+              <Link href={ctaHref} className="btn btn-primary btn-lg">
+                {ctaText} &rarr;
               </Link>
             </div>
           </div>
@@ -110,9 +110,9 @@ export default async function IndustryDetailPage({ params }: Props) {
 
       {/* Relevant Products */}
       {relatedProducts.length > 0 && (
-        <SectionContainer background="gunmetal" size="base" style={{ borderTop: "1px solid var(--lam-border)" }}>
+        <SectionContainer background="soft-grey" size="base" style={{ borderTop: "1px solid #CBD5E1" }}>
           <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-            <h2 style={{ fontSize: "var(--text-2xl)", marginBottom: "2rem" }}>Relevant Platforms</h2>
+            <h2 style={{ fontSize: "var(--text-2xl)", marginBottom: "2rem", color: "#0F172A" }}>Relevant Platforms</h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "2rem" }}>
               {relatedProducts.map(rp => (
                 <ProductCard key={rp!.id} product={rp!} />

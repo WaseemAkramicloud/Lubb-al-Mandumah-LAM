@@ -11,7 +11,7 @@ export function CtaSection({ data }: { data?: Record<string, unknown> | null }) 
   const secondaryLink = (data?.secondary_button_link as string) || "/request-demo"
 
   return (
-    <SectionContainer background="light" size="xl" style={{ borderTop: "1px solid var(--lam-light-border)" }}>
+    <SectionContainer background="light" size="xl" style={{ borderTop: "1px solid #CBD5E1" }}>
       <div
         style={{
           textAlign: "center",
@@ -19,15 +19,15 @@ export function CtaSection({ data }: { data?: Record<string, unknown> | null }) 
           marginInline: "auto",
         }}
       >
-        <p style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
+        <p style={{ fontSize: "var(--text-xs)", fontWeight: 700, color: "#1D4ED8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
           {eyebrow}
         </p>
-        <div className="lam-accent-line" style={{ margin: "0 auto 1.5rem" }} />
+        <div className="lam-accent-line" style={{ margin: "0 auto 1.5rem", background: "#1D4ED8" }} />
         
-        <h2 style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.75rem)", marginBottom: "1.25rem", color: "var(--lam-dark-text)" }} dangerouslySetInnerHTML={{ __html: (title as string).replace('LΛM', 'L<span style="font-style: italic">Λ</span>M') }}>
+        <h2 style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.75rem)", marginBottom: "1.25rem", color: "#0F172A" }} dangerouslySetInnerHTML={{ __html: (title as string).replace('LΛM', 'L<span style="font-style: italic">Λ</span>M') }}>
         </h2>
         
-        <p style={{ fontSize: "var(--text-lg)", color: "var(--lam-dark-text-muted)", marginBottom: "2.5rem", lineHeight: 1.6 }}>
+        <p style={{ fontSize: "var(--text-lg)", color: "#334155", marginBottom: "2.5rem", lineHeight: 1.65 }}>
           {description}
         </p>
         

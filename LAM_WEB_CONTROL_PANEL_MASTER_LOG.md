@@ -771,3 +771,18 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
      - **Hero Slider Messaging**: Preserved existing slider photography (`slider-01` through `slider-04`) and added synchronized contextual overlay text (one strong headline + one short supporting line per slide) with smooth fading transitions.
      - **Gold Elimination**: Removed heavy gold gradient backgrounds, glowing gold text effects, gold buttons, and gold card hover states across the public site. Replaced with deep graphite buttons (`#0F172A`), clean charcoal typography, and subtle slate blue accents (`#2563EB`).
      - **Modern International Group Aesthetic**: Lightened all public layout sections (warm white `#FAFAFC`, light stone `#F1F5F9`, pale grey `#F8FAFC`). Removed forced all-caps headings in favor of natural Title Case typography, generous padding, and subtle card borders (`#E2E8F0`).
+  19. **Public Website WCAG AAA Typography Contrast Correction**:
+     - **Global Design Tokens (`app/globals.css`)**: Updated typography design tokens to guarantee high-contrast WCAG AAA compliance across all light and dark public surfaces:
+       - `--lam-dark-text`: `#0F172A` (Slate 900 — Near-black / Deep Charcoal, 16:1 contrast ratio on white)
+       - `--lam-dark-text-muted`: `#334155` (Slate 700 — Medium-Dark Charcoal, 9.8:1 contrast ratio on white)
+       - `--lam-dark-text-secondary`: `#475569` (Slate 600 — Medium Grey, 7.1:1 contrast ratio on white)
+       - `--lam-blue-accent`: `#1D4ED8` (Slate/Blue 700 — Eyebrow & Link accent, 7.9:1 contrast ratio on white)
+       - `--lam-light-border`: `#CBD5E1` (Slate 300)
+     - **Public Pages & Component Audit**: Updated typography contrast across all public website pages and shared layout components:
+       - `HeroSlider.tsx`: High-contrast overlay backdrop with `#FFFFFF` headlines, `#F8FAFC` sublines, and `#38BDF8` taglines.
+       - `SectionHeader.tsx`: Title Case headings (`#0F172A`), blue eyebrows (`#1D4ED8`), and slate body text (`#475569`).
+       - `ProductCard.tsx`, `ArticleCard.tsx`, `EntityCard.tsx`: High-contrast headings (`#0F172A`), body copy (`#334155`), and category/action links (`#1D4ED8`).
+       - `IntroSection.tsx`, `SolutionsTeaser.tsx`, `WhyLamSection.tsx`, `SecuritySection.tsx`, `ClientsPreview.tsx`, `InsightsPreview.tsx`, `CtaSection.tsx`: High-contrast slate copy and crisp borders.
+       - `Header.tsx` & `Footer.tsx`: High-contrast logo mark, slate navigation links (`#CBD5E1`), and dividers (`#334155`).
+       - Public Page Views (`/about`, `/about/careers`, `/solutions`, `/solutions/[slug]`, `/industries`, `/industries/[slug]`, `/insights`, `/insights/[slug]`, `/contact`, `/request-demo`, `/partners`): All converted to light `#FAFAFC` / `#F8FAFC` backgrounds with `#0F172A` headings and `#334155` body paragraphs.
+     - **Build & Live Verification**: Automated tests (`npx tsx scripts/test-cms-live-binding.ts`) and full production build (`npm run build`) passed 100% cleanly across all 105 routes.

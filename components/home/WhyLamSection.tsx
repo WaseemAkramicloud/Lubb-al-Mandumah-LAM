@@ -43,11 +43,11 @@ export function WhyLamSection({ data }: { data?: Record<string, unknown> | null 
       >
         {(points as Record<string, string>[]).map((point, index: number) => (
           <div key={index} className="lam-card" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div style={{ width: "36px", height: "36px", borderRadius: "0.375rem", background: "#0F172A", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFFFFF", fontWeight: "600", fontSize: "0.9rem" }}>
+            <div style={{ width: "36px", height: "36px", borderRadius: "0.375rem", background: "#0F172A", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFFFFF", fontWeight: "700", fontSize: "0.9rem" }}>
               0{index + 1}
             </div>
-            <h3 style={{ fontSize: "var(--text-xl)", color: "var(--lam-dark-text)" }}>{point.title}</h3>
-            <p style={{ color: "var(--lam-dark-text-muted)", lineHeight: 1.6, fontSize: "var(--text-sm)" }}>
+            <h3 style={{ fontSize: "var(--text-xl)", color: "#0F172A" }}>{point.title}</h3>
+            <p style={{ color: "#334155", lineHeight: 1.65, fontSize: "var(--text-sm)" }}>
               {point.description}
             </p>
           </div>

@@ -96,12 +96,12 @@ export function HeroSlider({ data }: { data?: Record<string, unknown> | null }) 
         </div>
       ))}
 
-      {/* Refined Backdrop Overlay */}
+      {/* High-Contrast Backdrop Overlay */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(180deg, rgba(15,23,42,0.4) 0%, rgba(15,23,42,0.65) 60%, rgba(15,23,42,0.85) 100%)",
+          background: "linear-gradient(180deg, rgba(15,23,42,0.55) 0%, rgba(15,23,42,0.78) 60%, rgba(15,23,42,0.95) 100%)",
           zIndex: 1,
         }}
       />
@@ -120,11 +120,12 @@ export function HeroSlider({ data }: { data?: Record<string, unknown> | null }) 
         <p
           style={{
             fontSize: "var(--text-xs)",
-            fontWeight: 600,
-            letterSpacing: "0.12em",
+            fontWeight: 700,
+            letterSpacing: "0.14em",
             textTransform: "uppercase",
             color: "#38BDF8",
             marginBottom: "1rem",
+            textShadow: "0 1px 4px rgba(0,0,0,0.5)",
           }}
         >
           Lubb al-Mandūmah — Technology Group
@@ -144,7 +145,7 @@ export function HeroSlider({ data }: { data?: Record<string, unknown> | null }) 
                   lineHeight: 1.1,
                   color: "#FFFFFF",
                   marginBottom: "1.25rem",
-                  textShadow: "0 2px 10px rgba(0,0,0,0.3)",
+                  textShadow: "0 2px 12px rgba(0,0,0,0.6)",
                 }}
               >
                 {slide.headline || defaultSlides[index]?.headline || "Lubb al-Mandūmah"}
@@ -153,13 +154,13 @@ export function HeroSlider({ data }: { data?: Record<string, unknown> | null }) 
               <p
                 style={{
                   fontSize: "clamp(1.1rem, 2vw, 1.35rem)",
-                  color: "rgba(255,255,255,0.9)",
-                  maxWidth: "700px",
+                  color: "#F8FAFC",
+                  maxWidth: "720px",
                   marginInline: "auto",
                   marginBottom: "2.5rem",
-                  lineHeight: 1.6,
-                  fontWeight: 400,
-                  textShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                  lineHeight: 1.65,
+                  fontWeight: 500,
+                  textShadow: "0 2px 8px rgba(0,0,0,0.6)",
                 }}
               >
                 {slide.subline || defaultSlides[index]?.subline || "The foundational technology ecosystem powering modern organizations."}
@@ -179,8 +180,8 @@ export function HeroSlider({ data }: { data?: Record<string, unknown> | null }) 
                   style={{
                     background: "#FFFFFF",
                     color: "#0F172A",
-                    fontWeight: 600,
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                    fontWeight: 700,
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
                   }}
                 >
                   {slide.ctaText || defaultSlides[index]?.ctaText || "Explore Ecosystem"} &rarr;
@@ -189,10 +190,11 @@ export function HeroSlider({ data }: { data?: Record<string, unknown> | null }) 
                   href="/request-demo"
                   className="btn btn-lg"
                   style={{
-                    background: "rgba(255,255,255,0.12)",
+                    background: "rgba(15,23,42,0.75)",
                     color: "#FFFFFF",
-                    border: "1px solid rgba(255,255,255,0.3)",
+                    border: "1px solid rgba(255,255,255,0.4)",
                     backdropFilter: "blur(4px)",
+                    fontWeight: 600,
                   }}
                 >
                   Request Demo
@@ -226,7 +228,7 @@ export function HeroSlider({ data }: { data?: Record<string, unknown> | null }) 
               width: index === current ? "2rem" : "0.5rem",
               height: "0.5rem",
               borderRadius: "4px",
-              background: index === current ? "#38BDF8" : "rgba(255,255,255,0.35)",
+              background: index === current ? "#38BDF8" : "rgba(255,255,255,0.45)",
               border: "none",
               cursor: "pointer",
               transition: "all var(--transition-base)",

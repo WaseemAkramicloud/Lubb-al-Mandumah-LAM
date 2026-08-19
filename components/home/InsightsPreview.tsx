@@ -57,19 +57,19 @@ export function InsightsPreview() {
           <Link key={post.id} href={post.href} style={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", height: "100%" }}>
             <div className="lam-card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                <span className="lam-badge" style={{ background: "rgba(37,99,235,0.08)", color: "#2563EB", border: "1px solid rgba(37,99,235,0.2)" }}>
+                <span className="lam-badge" style={{ background: "rgba(29,78,216,0.08)", color: "#1D4ED8", border: "1px solid rgba(29,78,216,0.25)" }}>
                   {post.category}
                 </span>
-                <span style={{ fontSize: "var(--text-xs)", color: "var(--lam-dark-text-muted)" }}>{post.readTime}</span>
+                <span style={{ fontSize: "var(--text-xs)", color: "#475569", fontWeight: 500 }}>{post.readTime}</span>
               </div>
               
-              <h3 style={{ fontSize: "var(--text-lg)", marginBottom: "1rem", lineHeight: 1.4, color: "var(--lam-dark-text)" }}>
+              <h3 style={{ fontSize: "var(--text-lg)", marginBottom: "1rem", lineHeight: 1.4, color: "#0F172A" }}>
                 {post.title}
               </h3>
               
-              <div style={{ marginTop: "auto", paddingTop: "1.25rem", borderTop: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "var(--text-xs)", color: "var(--lam-dark-text-muted)" }}>{post.date}</span>
-                <span style={{ color: "#2563EB", fontSize: "1.1rem" }}>&rarr;</span>
+              <div style={{ marginTop: "auto", paddingTop: "1.25rem", borderTop: "1px solid #CBD5E1", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "var(--text-xs)", color: "#475569", fontWeight: 500 }}>{post.date}</span>
+                <span style={{ color: "#1D4ED8", fontSize: "1.1rem" }}>&rarr;</span>
               </div>
             </div>
           </Link>
