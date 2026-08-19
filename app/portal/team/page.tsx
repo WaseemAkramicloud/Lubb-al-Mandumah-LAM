@@ -1,6 +1,7 @@
-import { getCurrentCustomer } from '@/lib/actions/customer-auth'
+import { getCurrentCustomer, getOwnerConsoleData } from '@/lib/actions/customer-auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { TeamAccessClient } from './TeamAccessClient'
+import { redirect } from 'next/navigation'
 
 export const metadata = {
   title: "Team & Access Control | Customer Portal",
@@ -9,6 +10,12 @@ export const metadata = {
 export default async function CustomerTeamPage() {
   const customer = await getCurrentCustomer()
   if (!customer) return null
+
+  // STRICT EMPLOYEE ISOLATION: Require Owner authority
+  const ownerData = await getOwnerConsoleData()
+  if (!ownerData.isOwner) {
+    redirect('/portal')
+  }
 
   const supabase = getSupabaseAdmin()
 

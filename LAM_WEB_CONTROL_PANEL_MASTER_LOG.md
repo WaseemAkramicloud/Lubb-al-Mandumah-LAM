@@ -108,6 +108,7 @@ This section summarizes the **DEFINITIVE live architecture** as of **Stage 15 (2
 - **Stage 15 (Route Consolidation, Client Management & Legacy UI Stabilisation)**: **Completed & Verified** (2026-08-15)
 - **Stage B / Stage 19 (Central Identity & Control Plane Database Foundation)**: **Completed & Verified** (2026-08-19)
 - **Stage C / Stage 20 (Central Identity Engine & Dual Authentication Resolution)**: **Completed & Verified** (2026-08-19)
+- **Stage D / Stage 21 (LAM Access Web Hub, Owner Console & Strict Access Isolation)**: **Completed & Verified** (2026-08-19)
 
 ---
 
@@ -568,6 +569,38 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
       7. Product mismatch enforcement (mismatched code rejected cleanly).
       8. Company Owner account isolation (email login verified independently).
   - **Production Build Verification**: `npm run build` compiled 100% cleanly across all 101 routes with 0 errors.
+
+---
+
+### Stage D: LAM Access Web Hub, Owner Console & Strict Access Isolation (2026-08-19)
+- **Status**: Completed & Verified.
+- **What was implemented**:
+  - **LAM Access Domain Surface Routing (`proxy.ts`)**:
+    - Host matcher configured for canonical `https://access.lubbalmandumah.com` surface, seamlessly routing requests to `/portal` surface while enforcing canonical subdomains on Vercel alias endpoints.
+  - **Company Owner Console (`app/portal/OwnerConsoleClient.tsx`)**:
+    - Interactive Owner Console rendering Customer Account metadata, linked Organizations (`ABC School`, `ABC Manufacturing`), Product Workspaces (`AHS...`, `ATO...`), Plan Tiers, and calculated active seat usage (e.g. `2 / 2 Seats (100% Full)`).
+    - Features workspace tabs, product launch actions, and active user management tables.
+  - **Strict Server-Side Employee Isolation (`app/portal/page.tsx`, `team/page.tsx`, `company/page.tsx`)**:
+    - Server loader checks `getOwnerConsoleData().isOwner`.
+    - If caller is an ordinary workspace employee, page renders **Strict Employee Isolation View**: displays ONLY their assigned workspace, user ID, role, and application launch link.
+    - If an employee attempts to navigate to `/portal/team` or `/portal/company`, server-side authorization checks redirect them safely to `/portal` without exposing customer account portfolio or organization data.
+  - **Active Seat Usage & Limit Enforcement (`createWorkspaceEmployeeAccount`, `updateWorkspaceUserStatusAction`)**:
+    - Active seat usage is calculated per workspace: `COUNT(lam_workspace_memberships) WHERE workspace_id = ws.id AND status = 'active'`.
+    - Enforces seat limit check when adding new employees or reactivating suspended users. Rejects additions with error: `"Seat limit reached (2/2 active seats). Please upgrade your plan tier to add more users."`
+  - **Workspace User Administration**:
+    - Company Owner can view workspace users, create new workspace employees (Workspace Code + User ID + Initial Password), issue password resets (`LAM-Reset-...!`), and toggle user status (`suspended` / `active`).
+  - **Verification Testing (`scripts/test-stage-d-isolation.ts`)**:
+    - Executed automated test suite verifying all 7 required Stage D scenarios:
+      1. Owner Console hierarchy resolution (Customer Account → Orgs → Workspaces).
+      2. Active seat usage calculations (`1/2 seats`, `2/2 seats`).
+      3. Seat limit enforcement on user creation attempts.
+      4. Strict employee isolation (employee sees only assigned workspace).
+      5. Workspace user administration (suspend user updates seat count to 1/2; password reset succeeds).
+      6. Cascading suspension hierarchy enforcement (org suspension blocks login cleanly).
+      7. Domain & OIDC product launch target resolution (`https://aimhighserp.lubbalmandumah.com`, `https://atom.lubbalmandumah.com`).
+    - Re-ran Stage B and Stage C verification tests (`scripts/test-stage-b-integrity.ts` and `scripts/test-stage-c-authentication.ts`): All passed 100% cleanly.
+  - **Production Build Verification**: `npm run build` compiled 100% cleanly across all 101 routes with 0 errors.
+
 
 
 

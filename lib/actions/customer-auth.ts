@@ -322,12 +322,26 @@ export async function createWorkspaceEmployeeAccount(params: {
   // 1. Verify target workspace exists and product uses lam_sso
   const { data: workspace, error: wsErr } = await supabase
     .from('lam_product_workspaces')
-    .select('id, workspace_code, product_slug')
+    .select('id, workspace_code, product_slug, max_seats')
     .eq('id', workspaceId)
     .single()
 
   if (wsErr || !workspace) {
     return { success: false, error: 'Target product workspace not found.' }
+  }
+
+  // 1b. Check active seat usage against max_seats limit
+  const { count: activeSeats } = await supabase
+    .from('lam_workspace_memberships')
+    .select('id', { count: 'exact', head: true })
+    .eq('workspace_id', workspace.id)
+    .eq('status', 'active')
+
+  if (activeSeats !== null && activeSeats >= workspace.max_seats) {
+    return {
+      success: false,
+      error: `Seat limit reached (${activeSeats}/${workspace.max_seats} active seats). Please upgrade your plan tier to add more users.`
+    }
   }
 
   const { data: prod } = await supabase.from('lam_products').select('identity_mode').eq('slug', workspace.product_slug).single()
@@ -869,4 +883,256 @@ export async function submitCustomerSupportTicket(formData: FormData) {
 
   await logCustomerAudit(currentCustomer.id, null, 'support_ticket_submitted', { subject })
   return { success: true, ticketId: `TICK-${Math.floor(100000 + Math.random() * 900000)}` }
+}
+
+// --------------------------------------------------------------------------
+// STAGE D: OWNER CONSOLE & STRICT EMPLOYEE ISOLATION ACTIONS
+// --------------------------------------------------------------------------
+
+export async function getOwnerConsoleData() {
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { isOwner: false, error: 'Unauthorized' }
+
+  const supabase = getSupabaseAdmin()
+
+  // 1. Check if user is a Company Owner / Admin
+  const { data: compMem } = await supabase
+    .from('customer_company_memberships')
+    .select('company_id, company_role, company:crm_companies(*)')
+    .eq('customer_id', currentCustomer.id)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  const isOwner = compMem && ['owner', 'admin'].includes(compMem.company_role)
+
+  if (!isOwner) {
+    return { isOwner: false }
+  }
+
+  // 2. Resolve Customer Account & Hierarchy
+  const company = (compMem as any)?.company
+  let customerAccountId = company?.customer_account_id
+
+  if (!customerAccountId) {
+    const { data: ca } = await supabase
+      .from('lam_customer_accounts')
+      .select('id')
+      .limit(1)
+      .maybeSingle()
+    customerAccountId = ca?.id
+  }
+
+  if (!customerAccountId) {
+    return { isOwner: true, customerAccount: null, organizations: [], workspaces: [] }
+  }
+
+  // Fetch Customer Account Detail
+  const { data: customerAccount } = await supabase
+    .from('lam_customer_accounts')
+    .select('*')
+    .eq('id', customerAccountId)
+    .single()
+
+  // Fetch Organizations
+  const { data: organizations } = await supabase
+    .from('lam_organizations')
+    .select('*')
+    .eq('customer_account_id', customerAccountId)
+
+  // Fetch Product Workspaces
+  const { data: rawWorkspaces } = await supabase
+    .from('lam_product_workspaces')
+    .select('*, organization:lam_organizations(name, organization_code)')
+    .eq('customer_account_id', customerAccountId)
+
+  // Fetch SSO Products Registry
+  const { data: ssoProducts } = await supabase
+    .from('lam_products')
+    .select('*')
+
+  const prodMap = new Map((ssoProducts || []).map(p => [p.slug, p]))
+
+  // Process Workspaces with Active Seat Usage Calculation
+  const workspaces = await Promise.all((rawWorkspaces || []).map(async ws => {
+    const prodInfo = prodMap.get(ws.product_slug) || {
+      name: ws.product_slug.toUpperCase(),
+      identity_mode: 'lam_sso',
+      client_id: `lam_app_${ws.product_slug}`,
+      app_url: `https://${ws.product_slug}.lubbalmandumah.com`
+    }
+
+    // Active seat usage calculation per workspace/product
+    const { count: activeSeats } = await supabase
+      .from('lam_workspace_memberships')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', ws.id)
+      .eq('status', 'active')
+
+    // Fetch workspace members
+    const { data: rawMembers } = await supabase
+      .from('lam_workspace_memberships')
+      .select('*, customer:customer_identities(*)')
+      .eq('workspace_id', ws.id)
+
+    const members = (rawMembers || []).map((m: any) => ({
+      id: m.id,
+      userId: m.user_id,
+      workspaceRole: m.workspace_role,
+      status: m.status,
+      customerName: m.customer ? `${m.customer.first_name || ''} ${m.customer.last_name || ''}`.trim() : 'N/A',
+      authUserId: m.customer?.auth_user_id || m.customer?.id,
+      customerStatus: m.customer?.status || 'active',
+      createdAt: m.created_at
+    }))
+
+    const ssoLaunchUrl = `/api/sso/authorize?client_id=${prodInfo.client_id || 'lam_app_' + ws.product_slug}&product=${ws.product_slug}&workspace=${ws.workspace_code}&redirect_uri=${encodeURIComponent((prodInfo.app_url || `https://${ws.product_slug}.lubbalmandumah.com`) + '/auth/callback')}`
+
+    return {
+      id: ws.id,
+      workspaceCode: ws.workspace_code,
+      productSlug: ws.product_slug,
+      productName: prodInfo.name,
+      identityMode: prodInfo.identity_mode || 'lam_sso',
+      appUrl: prodInfo.app_url,
+      planTier: ws.plan_tier,
+      maxSeats: ws.max_seats,
+      activeSeats: activeSeats || 0,
+      status: ws.status,
+      organizationId: ws.organization_id,
+      organizationName: (ws as any).organization?.name || 'N/A',
+      members,
+      ssoLaunchUrl
+    }
+  }))
+
+  return {
+    isOwner: true,
+    customerAccount,
+    organizations: organizations || [],
+    workspaces,
+    ssoProducts: (ssoProducts || []).filter(p => p.identity_mode === 'lam_sso')
+  }
+}
+
+export async function getEmployeeWorkspaceData() {
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return null
+
+  const supabase = getSupabaseAdmin()
+
+  // STRICT EMPLOYEE ISOLATION: Fetch ONLY memberships belonging to current customer
+  const { data: memberships } = await supabase
+    .from('lam_workspace_memberships')
+    .select('*, workspace:lam_product_workspaces(*)')
+    .eq('customer_id', currentCustomer.id)
+    .eq('status', 'active')
+
+  if (!memberships || memberships.length === 0) {
+    return []
+  }
+
+  const { data: ssoProducts } = await supabase.from('lam_products').select('*')
+  const prodMap = new Map((ssoProducts || []).map(p => [p.slug, p]))
+
+  // Return strictly isolated assigned workspace data
+  return memberships.map((m: any) => {
+    const ws = m.workspace
+    const prod = prodMap.get(ws.product_slug)
+    const appUrl = prod?.app_url || `https://${ws.product_slug}.lubbalmandumah.com`
+    const ssoLaunchUrl = `/api/sso/authorize?client_id=${prod?.client_id || 'lam_app_' + ws.product_slug}&product=${ws.product_slug}&workspace=${ws.workspace_code}&redirect_uri=${encodeURIComponent(appUrl + '/auth/callback')}`
+
+    return {
+      workspaceCode: ws.workspace_code,
+      productSlug: ws.product_slug,
+      productName: prod?.name || ws.product_slug.toUpperCase(),
+      userId: m.user_id,
+      role: m.workspace_role,
+      status: m.status,
+      ssoLaunchUrl
+    }
+  })
+}
+
+export async function updateWorkspaceUserStatusAction(params: {
+  workspaceId: string
+  membershipId: string
+  newStatus: 'active' | 'suspended'
+}) {
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
+
+  const { workspaceId, membershipId, newStatus } = params
+  const supabase = getSupabaseAdmin()
+
+  // 1. Verify caller is Company Owner/Admin
+  const ownerData = await getOwnerConsoleData()
+  if (!ownerData.isOwner) {
+    return { success: false, error: 'Only Company Owners can update workspace user status.' }
+  }
+
+  const ws = ownerData.workspaces?.find((w: any) => w.id === workspaceId)
+  if (!ws) {
+    return { success: false, error: 'Workspace not found or unauthorized.' }
+  }
+
+  // 2. Seat limit check if reactivating user
+  if (newStatus === 'active' && ws.activeSeats >= ws.maxSeats) {
+    return {
+      success: false,
+      error: `Seat limit reached (${ws.activeSeats}/${ws.maxSeats} active seats). Please upgrade your plan tier to activate more users.`
+    }
+  }
+
+  // 3. Update membership status
+  const { data: mem, error: memErr } = await supabase
+    .from('lam_workspace_memberships')
+    .update({ status: newStatus })
+    .eq('id', membershipId)
+    .eq('workspace_id', workspaceId)
+    .select('customer_id')
+    .single()
+
+  if (memErr || !mem) {
+    return { success: false, error: `Failed to update membership status: ${memErr?.message}` }
+  }
+
+  // Update linked customer identity status
+  await supabase.from('customer_identities').update({ status: newStatus }).eq('id', mem.customer_id)
+
+  await logCustomerAudit(currentCustomer.id, null, `workspace_user_${newStatus}`, { workspaceId, membershipId, targetCustomerId: mem.customer_id })
+  revalidatePath('/portal')
+  return { success: true }
+}
+
+export async function resetWorkspaceUserPasswordAction(params: {
+  workspaceId: string
+  authUserId: string
+}) {
+  const currentCustomer = await getCurrentCustomer()
+  if (!currentCustomer) return { success: false, error: 'Unauthorized.' }
+
+  const { workspaceId, authUserId } = params
+  const supabase = getSupabaseAdmin()
+
+  // Verify caller is Company Owner/Admin
+  const ownerData = await getOwnerConsoleData()
+  if (!ownerData.isOwner) {
+    return { success: false, error: 'Only Company Owners can reset workspace user passwords.' }
+  }
+
+  const newPassword = `LAM-Reset-${Math.floor(100000 + Math.random() * 900000)}!`
+
+  const { error: authErr } = await supabase.auth.admin.updateUserById(authUserId, {
+    password: newPassword,
+    user_metadata: { must_change_password: true }
+  })
+
+  if (authErr) {
+    return { success: false, error: `Failed to reset password: ${authErr.message}` }
+  }
+
+  await supabase.from('customer_identities').update({ must_change_password: true }).eq('id', authUserId)
+
+  await logCustomerAudit(currentCustomer.id, null, 'workspace_user_password_reset', { workspaceId, authUserId })
+  return { success: true, newPassword }
 }

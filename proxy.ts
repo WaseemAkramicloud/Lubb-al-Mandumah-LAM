@@ -34,7 +34,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(`https://staff.lubbalmandumah.com${pathname}${search}`, 307)
     }
     if (pathname.startsWith('/portal')) {
-      return NextResponse.redirect(`https://account.lubbalmandumah.com${pathname}${search}`, 307)
+      return NextResponse.redirect(`https://access.lubbalmandumah.com${pathname}${search}`, 307)
     }
   }
 
@@ -70,8 +70,8 @@ export async function proxy(request: NextRequest) {
     return await updateSession(request)
   }
 
-  // 4. Customer Account Portal: account.lubbalmandumah.com
-  if (host === 'account.lubbalmandumah.com') {
+  // 4. Customer Account Portal / Owner Console: account.lubbalmandumah.com & access.lubbalmandumah.com
+  if (host === 'account.lubbalmandumah.com' || host === 'access.lubbalmandumah.com') {
     if (pathname === '/') {
       return NextResponse.redirect(new URL('/portal', request.url))
     }
