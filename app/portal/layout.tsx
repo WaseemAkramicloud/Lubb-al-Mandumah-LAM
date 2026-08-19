@@ -12,7 +12,14 @@ export default async function CustomerPortalLayout({ children }: { children: Rea
   const customer = await getCurrentCustomer()
 
   if (!customer) {
-    redirect('/id/login?redirect_to=/portal')
+    const isProd = process.env.NODE_ENV === 'production'
+    const idHost = process.env.NEXT_PUBLIC_LAM_ID_URL || (isProd ? 'https://id.lubbalmandumah.com' : '')
+    const accessHost = process.env.NEXT_PUBLIC_LAM_ACCESS_URL || (isProd ? 'https://access.lubbalmandumah.com' : '')
+
+    const targetUrl = isProd ? `${accessHost}/portal` : '/portal'
+    const loginRedirectUrl = `${idHost}/id/login?redirect_to=${encodeURIComponent(targetUrl)}`
+
+    redirect(loginRedirectUrl)
   }
 
   const supabase = getSupabaseAdmin()

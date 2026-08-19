@@ -70,8 +70,16 @@ export async function proxy(request: NextRequest) {
     return await updateSession(request)
   }
 
-  // 4. Customer Account Portal / Owner Console: account.lubbalmandumah.com & access.lubbalmandumah.com
+  // 4. Customer Account Portal / Owner Console: access.lubbalmandumah.com & account.lubbalmandumah.com
   if (host === 'account.lubbalmandumah.com' || host === 'access.lubbalmandumah.com') {
+    // Redirect /id/* requests across hosts to canonical Identity Authority host
+    if (pathname.startsWith('/id/') || pathname === '/id') {
+      return NextResponse.redirect(`https://id.lubbalmandumah.com${pathname}${search}`, 307)
+    }
+    // Redirect staff routes across hosts to staff subdomain
+    if (pathname.startsWith('/control-panel') || pathname.startsWith('/staff-login')) {
+      return NextResponse.redirect(`https://staff.lubbalmandumah.com${pathname}${search}`, 307)
+    }
     if (pathname === '/') {
       return NextResponse.redirect(new URL('/portal', request.url))
     }
@@ -91,7 +99,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(`https://id.lubbalmandumah.com${pathname}${search}`, 301)
     }
     if (pathname.startsWith('/portal')) {
-      return NextResponse.redirect(`https://account.lubbalmandumah.com${pathname}${search}`, 301)
+      return NextResponse.redirect(`https://access.lubbalmandumah.com${pathname}${search}`, 301)
     }
     return await updateSession(request)
   }

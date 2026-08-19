@@ -741,6 +741,8 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
   13. **Onboarding UI Product Dropdown Correction**:
      - Corrected `app/control-panel/modules/ecosystem/companies/new/page.tsx` and `OnboardingForm.tsx` to load products dynamically from `lam_products` filtered strictly by `identity_mode = 'lam_sso'` and `status = 'active'`.
      - PointO and AMAL (`identity_mode = 'local_platform'`) are 100% removed from the onboarding dropdown surface. Future `lam_sso` products will automatically populate dynamically.
-
-
-
+  14. **Access-Host & Identity Authentication Redirect-Chain Correction**:
+     - Corrected `proxy.ts` host rules for `access.lubbalmandumah.com` so `/id/*` requests are intercepted and redirected 307 across hosts to `https://id.lubbalmandumah.com/id/...` instead of being rewritten to `/portal`.
+     - Updated `app/portal/layout.tsx` to redirect unauthenticated visitors across hosts to `https://id.lubbalmandumah.com/id/login?redirect_to=https://access.lubbalmandumah.com/portal`.
+     - Updated `customer-auth.ts` cookie domain (`.lubbalmandumah.com` in production) and `getSafeReturnUrl` to preserve absolute return URLs (`https://access.lubbalmandumah.com/portal`).
+     - Eliminates redirect loops and ensures login returns to `access.lubbalmandumah.com/portal` exactly once.

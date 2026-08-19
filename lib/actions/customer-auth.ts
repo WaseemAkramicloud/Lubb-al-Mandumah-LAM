@@ -7,6 +7,34 @@ import { logCustomerAudit } from '@/lib/sso/sso-service'
 import { revalidatePath } from 'next/cache'
 
 const SESSION_COOKIE_NAME = 'lam_customer_session'
+const COOKIE_DOMAIN = process.env.NODE_ENV === 'production' ? '.lubbalmandumah.com' : undefined
+
+export async function getSafeReturnUrl(returnTo: string | undefined): Promise<string> {
+  const isProd = process.env.NODE_ENV === 'production'
+  const defaultTarget = isProd ? 'https://access.lubbalmandumah.com/portal' : '/portal'
+
+  if (!returnTo) return defaultTarget
+
+  const trimmed = returnTo.trim()
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+    return trimmed
+  }
+
+  try {
+    const parsed = new URL(trimmed)
+    const host = parsed.hostname.toLowerCase()
+    if (
+      host === 'lubbalmandumah.com' ||
+      host.endsWith('.lubbalmandumah.com') ||
+      host === 'localhost' ||
+      host === '127.0.0.1'
+    ) {
+      return trimmed
+    }
+  } catch {}
+
+  return defaultTarget
+}
 
 export interface CustomerLoginResult {
   success: boolean
@@ -35,9 +63,9 @@ export async function customerLogin(formDataInput: FormData | Record<string, any
   const userId = getValue('user_id', 'userId')?.trim().toLowerCase()
   const email = getValue('email')?.trim().toLowerCase()
   const password = getValue('password') || ''
-  const returnTo = getValue('return_to', 'returnTo') || '/portal'
+  const returnTo = getValue('return_to', 'returnTo')
+  const safeReturnTo = await getSafeReturnUrl(returnTo)
   const requestingProduct = getValue('requesting_product', 'requestingProduct')?.trim().toLowerCase()
-  const safeReturnTo = (returnTo.startsWith('/') && !returnTo.startsWith('//')) ? returnTo : '/portal'
 
   // If workspace_code & user_id are supplied OR mode === 'employee', process workspace login
   if (workspaceCode && userId) {
@@ -156,6 +184,7 @@ export async function customerLogin(formDataInput: FormData | Record<string, any
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
+      domain: COOKIE_DOMAIN,
       maxAge: 30 * 86400
     })
   } catch {}
@@ -293,6 +322,7 @@ export async function customerWorkspaceLogin(params: {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
+      domain: COOKIE_DOMAIN,
       maxAge: 30 * 86400
     })
   } catch {}
@@ -534,6 +564,7 @@ export async function completeFirstPasswordChange(formData: FormData) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
+        domain: COOKIE_DOMAIN,
         maxAge: 30 * 86400
       })
 
@@ -592,6 +623,16 @@ export async function customerLogout() {
   try {
     const cookieStore = await cookies()
     cookieStore.delete(SESSION_COOKIE_NAME)
+    if (COOKIE_DOMAIN) {
+      cookieStore.set(SESSION_COOKIE_NAME, '', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        domain: COOKIE_DOMAIN,
+        maxAge: 0
+      })
+    }
   } catch {}
 
   return { success: true }
