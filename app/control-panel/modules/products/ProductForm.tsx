@@ -153,12 +153,11 @@ export function ProductForm({ initialData, isNew = false, canPublish = false, pr
 
         <div className="form-group">
           <label>Category</label>
-          <select name="category" required defaultValue={initialData?.category || 'Business Software'} className="form-input">
-            <option>Business Software</option>
+          <select name="category" required defaultValue={initialData?.category || 'SaaS'} className="form-input">
+            <option>SaaS</option>
             <option>Education</option>
-            <option>Institutional Systems</option>
-            <option>Platform Ecosystems</option>
-            <option>Applications</option>
+            <option>Institutional</option>
+            <option>Platforms</option>
           </select>
         </div>
 

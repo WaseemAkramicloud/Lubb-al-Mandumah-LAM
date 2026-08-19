@@ -22,36 +22,8 @@ export default function Header() {
 
   /* Close mobile menu on route change */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileOpen(false);
   }, [pathname]);
-
-  /* Trap focus inside mobile menu */
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const el = menuRef.current;
-    if (!el) return;
-    const focusable = el.querySelectorAll<HTMLElement>(
-      'a[href], button, [tabindex]:not([tabindex="-1"])'
-    );
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const onKeydown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setMobileOpen(false);
-        triggerRef.current?.focus();
-      }
-      if (e.key === "Tab") {
-        if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
-          e.preventDefault();
-          (e.shiftKey ? last : first).focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", onKeydown);
-    first?.focus();
-    return () => document.removeEventListener("keydown", onKeydown);
-  }, [mobileOpen]);
 
   /* Lock body scroll when mobile menu is open */
   useEffect(() => {
@@ -61,6 +33,10 @@ export default function Header() {
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  // If on homepage and not scrolled, use dark hero text; if scrolled or on other pages, use crisp contrast
+  const isHomepage = pathname === "/";
+  const isDarkBg = isHomepage && !scrolled;
 
   return (
     <>
@@ -75,14 +51,14 @@ export default function Header() {
           height: "var(--header-height)",
           display: "flex",
           alignItems: "center",
-          transition: "background var(--transition-slow), border-color var(--transition-slow), box-shadow var(--transition-slow)",
-          background: scrolled
-            ? "rgba(10, 10, 11, 0.95)"
-            : "rgba(10, 10, 11, 0.7)",
+          transition: "all var(--transition-slow)",
+          background: isDarkBg
+            ? "rgba(8, 8, 9, 0.75)"
+            : "rgba(255, 255, 255, 0.92)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
-          borderBottom: `1px solid ${scrolled ? "rgba(201,168,76,0.12)" : "rgba(49,49,56,0.6)"}`,
-          boxShadow: scrolled ? "0 4px 32px rgba(0,0,0,0.4)" : "none",
+          borderBottom: `1px solid ${isDarkBg ? "rgba(201,168,76,0.15)" : "rgba(226,232,240,0.8)"}`,
+          boxShadow: scrolled ? "0 4px 20px rgba(0,0,0,0.06)" : "none",
         }}
       >
         <div
@@ -121,7 +97,7 @@ export default function Header() {
                 fontWeight: 600,
                 letterSpacing: "0.2em",
                 textTransform: "uppercase",
-                color: "var(--lam-silver)",
+                color: isDarkBg ? "var(--lam-silver)" : "var(--lam-dark-text-muted)",
                 marginTop: "1px",
               }}
             >
@@ -142,42 +118,48 @@ export default function Header() {
             }}
             className="header-nav-desktop"
           >
-            {mainNav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={isActive(item.href) ? "page" : undefined}
-                style={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: "0.8rem",
-                  fontWeight: 500,
-                  letterSpacing: "0.03em",
-                  padding: "0.4rem 0.7rem",
-                  borderRadius: "var(--radius-sm)",
-                  color: isActive(item.href) ? "var(--lam-white)" : "var(--lam-silver-light)",
-                  background: isActive(item.href) ? "var(--lam-surface)" : "transparent",
-                  transition: "color var(--transition-fast), background var(--transition-fast)",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive(item.href)) {
-                    (e.currentTarget as HTMLAnchorElement).style.color = "var(--lam-white)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive(item.href)) {
-                    (e.currentTarget as HTMLAnchorElement).style.color = "var(--lam-silver-light)";
-                  }
-                }}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {mainNav.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  style={{
+                    fontFamily: "var(--font-body)",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.03em",
+                    padding: "0.4rem 0.75rem",
+                    borderRadius: "var(--radius-sm)",
+                    color: active
+                      ? (isDarkBg ? "#FFFFFF" : "#0F172A")
+                      : (isDarkBg ? "rgba(240,240,244,0.85)" : "#475569"),
+                    background: active
+                      ? (isDarkBg ? "rgba(255,255,255,0.12)" : "rgba(201,168,76,0.12)")
+                      : "transparent",
+                    transition: "all var(--transition-fast)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* ── CTA + Hamburger ── */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
-            <Link href="/id/login" style={{ color: "var(--lam-silver-dim)", textDecoration: "none", fontSize: "var(--text-xs)", padding: "0.3rem 0.6rem" }}>
+            <Link
+              href="/id/login"
+              style={{
+                color: isDarkBg ? "var(--lam-mist)" : "var(--lam-dark-text-muted)",
+                textDecoration: "none",
+                fontSize: "var(--text-xs)",
+                fontWeight: 600,
+                padding: "0.3rem 0.6rem"
+              }}
+            >
               Client Sign In
             </Link>
             <Link href="/request-demo" className="btn btn-primary btn-sm header-cta">
@@ -193,9 +175,9 @@ export default function Header() {
               style={{
                 display: "none",
                 background: "none",
-                border: "1px solid var(--lam-border-light)",
+                border: `1px solid ${isDarkBg ? "var(--lam-border-light)" : "var(--lam-light-border)"}`,
                 borderRadius: "var(--radius-sm)",
-                color: "var(--lam-white)",
+                color: isDarkBg ? "var(--lam-white)" : "var(--lam-dark-text)",
                 cursor: "pointer",
                 padding: "0.4rem",
                 width: "2.25rem",
@@ -247,8 +229,8 @@ export default function Header() {
           right: 0,
           bottom: 0,
           width: "min(320px, 90vw)",
-          background: "var(--lam-gunmetal)",
-          borderLeft: "1px solid var(--lam-border)",
+          background: "#FFFFFF",
+          borderLeft: "1px solid var(--lam-light-border)",
           zIndex: 999,
           display: "flex",
           flexDirection: "column",
@@ -264,7 +246,7 @@ export default function Header() {
             alignItems: "center",
             justifyContent: "space-between",
             padding: "1.25rem 1.5rem",
-            borderBottom: "1px solid var(--lam-border)",
+            borderBottom: "1px solid var(--lam-light-border)",
           }}
         >
           <span
@@ -286,7 +268,7 @@ export default function Header() {
             style={{
               background: "none",
               border: "none",
-              color: "var(--lam-silver)",
+              color: "var(--lam-dark-text)",
               cursor: "pointer",
               padding: "0.25rem",
             }}
@@ -311,8 +293,8 @@ export default function Header() {
                 fontFamily: "var(--font-body)",
                 fontSize: "var(--text-base)",
                 fontWeight: isActive(item.href) ? 600 : 400,
-                color: isActive(item.href) ? "var(--lam-white)" : "var(--lam-silver-light)",
-                borderLeft: isActive(item.href) ? "2px solid var(--lam-gold)" : "2px solid transparent",
+                color: isActive(item.href) ? "var(--lam-dark-text)" : "var(--lam-dark-text-muted)",
+                borderLeft: isActive(item.href) ? "3px solid var(--lam-gold)" : "3px solid transparent",
                 transition: "all var(--transition-fast)",
               }}
             >
@@ -322,7 +304,7 @@ export default function Header() {
         </nav>
 
         {/* CTA in panel */}
-        <div style={{ padding: "1.25rem 1.5rem", borderTop: "1px solid var(--lam-border)" }}>
+        <div style={{ padding: "1.25rem 1.5rem", borderTop: "1px solid var(--lam-light-border)" }}>
           <Link href="/request-demo" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
             Request Demo
           </Link>

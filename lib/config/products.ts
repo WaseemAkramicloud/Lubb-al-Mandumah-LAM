@@ -1,9 +1,8 @@
 export type ProductCategory =
-  | "Business Software"
+  | "SaaS"
   | "Education"
-  | "Institutional Systems"
-  | "Platform Ecosystems"
-  | "Applications";
+  | "Institutional"
+  | "Platforms";
 
 export type CtaType = "demo" | "quote" | "institutional" | "partnership" | "app";
 
@@ -37,7 +36,7 @@ export const products: Product[] = [
     name: "ATOM",
     tagline: "Enterprise Operations Platform",
     description: "A comprehensive ERP and operations platform built for modern enterprises — covering inventory, procurement, sales, finance and more.",
-    category: "Business Software",
+    category: "SaaS",
     href: "/products/atom",
     detail: {
       whatItIs: "ATOM is a central nervous system for complex corporate entities. It consolidates disparate data streams and workflows into a single, scalable enterprise resource planning (ERP) environment.",
@@ -64,18 +63,49 @@ export const products: Product[] = [
     }
   },
   {
+    id: "nexora",
+    name: "NEXORA",
+    tagline: "Next-Generation Workforce & Operations OS",
+    description: "Real-time human capital, workforce dispatch, task orchestration, and field operations management suite.",
+    category: "SaaS",
+    href: "/products/nexora",
+    detail: {
+      whatItIs: "NEXORA is a high-velocity operations and workforce dispatch operating system designed for modern enterprises managing distributed workforces.",
+      whoItIsFor: "Logistics companies, field service providers, enterprise operations teams, and multi-branch service organizations.",
+      problemsSolved: [
+        "Inefficient shift dispatching and manual task scheduling.",
+        "Lack of real-time operational visibility across field teams.",
+        "Uncoordinated workforce allocation during peak operational cycles."
+      ],
+      keyCapabilities: [
+        "Automated workforce scheduling and dynamic task dispatch.",
+        "Real-time operational monitoring and status tracking.",
+        "Integrated time-tracking and shift management.",
+        "Role-based security and enterprise SSO integration."
+      ],
+      benefits: [
+        "Streamlined workforce productivity and reduced operational friction.",
+        "Full auditability and real-time oversight of daily field tasks.",
+        "Seamless integration into central corporate management."
+      ],
+      deploymentNote: "Enterprise SaaS deployed via LΛM ID single sign-on authority.",
+      relatedSolutions: ["atom"],
+      ctaType: "demo",
+    }
+  },
+  {
     id: "aimhighserp",
     name: "AimHighSERP",
     tagline: "SEO Intelligence Platform",
     description: "Advanced search engine intelligence that helps your brand dominate rankings with data-driven insights and automated optimisation.",
-    category: "Business Software",
+    category: "Education",
     href: "/products/aimhighserp",
     detail: {
       whatItIs: "An advanced digital marketing and search engine intelligence suite. AimHighSERP analyzes competitive landscapes and automatically highlights optimization vectors for enterprise web properties.",
-      whoItIsFor: "Digital marketing agencies, enterprise CMOs, and large-scale e-commerce brands.",
+      whoItIsFor: "Educational institutions, digital marketing agencies, enterprise CMOs, and large-scale web brands.",
       problemsSolved: [
         "Loss of organic traffic to aggressive competitors.",
-        "Inability to track keyword performance across hundreds of thousands of SKUs.",
+        "Inability to track keyword performance across hundreds of thousands of pages.",
         "Disconnect between content creation and search intent data."
       ],
       keyCapabilities: [
@@ -99,7 +129,7 @@ export const products: Product[] = [
     name: "MAAMS",
     tagline: "Multi-tenant Administration & Access Management System",
     description: "A restricted-access compliance and governance platform for diplomatic missions and approved institutions.",
-    category: "Institutional Systems",
+    category: "Institutional",
     href: "/products/maams",
     restricted: true,
     badge: "By Invitation",
@@ -132,7 +162,7 @@ export const products: Product[] = [
     name: "AMAL",
     tagline: "Finance & Investment Management",
     description: "A sophisticated financial management and investment portfolio platform designed for discerning institutions.",
-    category: "Platform Ecosystems",
+    category: "Platforms",
     href: "/products/amal",
     detail: {
       whatItIs: "AMAL is a comprehensive wealth and investment management platform. It aggregates complex asset classes into a singular analytical view, facilitating intelligent portfolio decisions.",
@@ -153,7 +183,7 @@ export const products: Product[] = [
         "Reduced administrative burden for wealth managers.",
         "Enhanced client trust via transparent, real-time reporting."
       ],
-      deploymentNote: "Enterprise SaaS with optional integration into existing banking infrastructure via secure APIs.",
+      deploymentNote: "Enterprise platform with optional integration into existing banking infrastructure via secure APIs.",
       relatedSolutions: ["atom"],
       ctaType: "partnership",
     }
@@ -163,7 +193,7 @@ export const products: Product[] = [
     name: "PointO",
     tagline: "Modern Point of Sale",
     description: "A sleek, intelligent point-of-sale platform for retail and hospitality businesses seeking operational excellence.",
-    category: "Business Software",
+    category: "Platforms",
     href: "/products/pointo",
     detail: {
       whatItIs: "PointO bridges the gap between digital infrastructure and the physical storefront. It is a modern, tablet-first POS system that seamlessly synchronizes with enterprise inventory.",
@@ -192,10 +222,17 @@ export const products: Product[] = [
 ];
 
 import { createClient } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const getProductsByCategory = async (category: string) => {
   try {
-    const supabase = await createClient();
+    let supabase: any;
+    try {
+      supabase = await createClient();
+    } catch {
+      supabase = getSupabaseAdmin();
+    }
+
     const query = supabase.from('cms_products').select('*').eq('status', 'published');
     
     if (category !== "All") {
@@ -217,7 +254,13 @@ export const getProductsByCategory = async (category: string) => {
 
 export const getProductById = async (id: string) => {
   try {
-    const supabase = await createClient();
+    let supabase: any;
+    try {
+      supabase = await createClient();
+    } catch {
+      supabase = getSupabaseAdmin();
+    }
+
     const { data } = await supabase.from('cms_products').select('*').eq('slug', id).eq('status', 'published').single();
     
     if (data) {

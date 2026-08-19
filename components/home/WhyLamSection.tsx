@@ -9,7 +9,7 @@ export function WhyLamSection({ data }: { data?: Record<string, unknown> | null 
   const defaultPoints = [
     {
       title: "True Interoperability",
-      description: "Our platforms are built from the ground up to communicate natively. Data flows seamlessly between ATOM ERP, PointO retail systems, and financial ledgers without third-party middleware."
+      description: "Our platforms are built from the ground up to communicate natively. Data flows seamlessly between ATOM ERP, NEXORA workforce OS, and financial ledgers without third-party middleware."
     },
     {
       title: "Single Identity Core",
@@ -24,12 +24,13 @@ export function WhyLamSection({ data }: { data?: Record<string, unknown> | null 
   const points = pointsList?.length ? pointsList : defaultPoints
 
   return (
-    <SectionContainer background="gunmetal" size="lg">
+    <SectionContainer background="stone" size="lg">
       <SectionHeader
         eyebrow={eyebrow}
         title={title}
         subtitle={subtitle}
         align="center"
+        theme="light"
       />
 
       <div
@@ -42,11 +43,11 @@ export function WhyLamSection({ data }: { data?: Record<string, unknown> | null 
       >
         {(points as Record<string, string>[]).map((point, index: number) => (
           <div key={index} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--lam-gradient-gold)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--lam-black)", fontWeight: "bold" }}>
+            <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--lam-gradient-gold)", display: "flex", alignItems: "center", justifyContent: "center", color: "#000", fontWeight: "bold" }}>
               {index + 1}
             </div>
-            <h3 style={{ fontSize: "var(--text-xl)" }}>{point.title}</h3>
-            <p style={{ color: "var(--lam-silver-light)", lineHeight: 1.6 }}>
+            <h3 style={{ fontSize: "var(--text-xl)", color: "var(--lam-dark-text)" }}>{point.title}</h3>
+            <p style={{ color: "var(--lam-dark-text-muted)", lineHeight: 1.6 }}>
               {point.description}
             </p>
           </div>

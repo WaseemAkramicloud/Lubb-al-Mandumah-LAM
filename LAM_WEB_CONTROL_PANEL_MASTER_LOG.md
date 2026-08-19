@@ -758,3 +758,12 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
      - Updated `getSafeReturnUrl` in production so default `/portal` return URLs for Owner logins map to `https://access.lubbalmandumah.com/portal`, preventing `proxy.ts` loopbacks on `id.lubbalmandumah.com`.
      - Added safe diagnostic logging (`[LAM ID AUTH TRACE]`) for production debugging with zero password/secret leakage.
      - Eliminates client-side JS navigation dependencies, browser event timing issues, and Safari ITP action revalidation interference for both Owner and Employee login flows.
+  17. **Public Website Favicon, Product Categorization, Light Theme Refinement & Live CMS Binding**:
+     - **Favicon Fix**: Added explicit `<head>` favicon links and shortcut icons in `app/layout.tsx`, exported `app/icon.png` and `app/apple-icon.png` using approved gold LAM branding mark (`favicon-official-lam.png`), ensuring 100% Safari and mobile icon display across `www.lubbalmandumah.com`.
+     - **Business Product Categories**: Synchronized business classifications across `lib/config/products.ts`, `ProductCategoryFilter.tsx`, `ProductForm.tsx`, `cms_products`, and `lam_products`:
+       - **SaaS**: ATOM, NEXORA
+       - **Education**: AimHighSERP
+       - **Institutional**: MAAMS
+       - **Platforms**: PointO, AMAL
+     - **Light Corporate Aesthetic**: Refined section backgrounds to warm white (`#FAFAFC`), light stone (`#F3F4F6`), and pale grey (`#EBF0F5`) with crisp charcoal typography (`#0F172A`), gold accents (`#C9A84C`), light surface cards, and glassmorphism headers, while selectively keeping existing moving animated hero slider (`HeroSlider`), security statement section (`SecuritySection`), and dark footer (`Footer`).
+     - **Live CMS Binding & Non-Technical Management**: Updated `lib/cms/client.ts`, `lib/config/products.ts`, and `lib/actions/products.ts` with safe `getSupabaseAdmin` fallback when called outside request scope. Verified live CMS binding via `scripts/test-cms-live-binding.ts` (100% Passed for headings, categories, descriptions, and hero slider image paths).

@@ -11,7 +11,7 @@ export function CtaSection({ data }: { data?: Record<string, unknown> | null }) 
   const secondaryLink = (data?.secondary_button_link as string) || "/request-demo"
 
   return (
-    <SectionContainer background="charcoal" size="xl" style={{ borderTop: "1px solid var(--lam-border)" }}>
+    <SectionContainer background="light" size="xl" style={{ borderTop: "1px solid var(--lam-light-border)" }}>
       <div
         style={{
           textAlign: "center",
@@ -19,15 +19,15 @@ export function CtaSection({ data }: { data?: Record<string, unknown> | null }) 
           marginInline: "auto",
         }}
       >
-        <p className="lam-eyebrow" style={{ marginBottom: "1rem" }}>
+        <p className="lam-eyebrow" style={{ marginBottom: "1rem", color: "var(--lam-gold)" }}>
           {eyebrow}
         </p>
         <div className="lam-accent-line" style={{ margin: "0 auto 1.5rem" }} />
         
-        <h2 style={{ fontSize: "clamp(2.5rem, 5vw, 4.5rem)", marginBottom: "1.5rem" }} dangerouslySetInnerHTML={{ __html: (title as string).replace('LΛM', 'L<span style="font-style: italic">Λ</span>M') }}>
+        <h2 style={{ fontSize: "clamp(2.5rem, 5vw, 4.5rem)", marginBottom: "1.5rem", color: "var(--lam-dark-text)" }} dangerouslySetInnerHTML={{ __html: (title as string).replace('LΛM', 'L<span style="font-style: italic">Λ</span>M') }}>
         </h2>
         
-        <p style={{ fontSize: "var(--text-lg)", color: "var(--lam-silver-light)", marginBottom: "3rem", lineHeight: 1.6 }}>
+        <p style={{ fontSize: "var(--text-lg)", color: "var(--lam-dark-text-muted)", marginBottom: "3rem", lineHeight: 1.6 }}>
           {description}
         </p>
         
@@ -35,7 +35,7 @@ export function CtaSection({ data }: { data?: Record<string, unknown> | null }) 
           <Link href={primaryLink} className="btn btn-primary btn-lg">
             {primaryText}
           </Link>
-          <Link href={secondaryLink} className="btn btn-secondary btn-lg">
+          <Link href={secondaryLink} className="btn btn-secondary btn-lg" style={{ color: "var(--lam-dark-text)", borderColor: "var(--lam-light-border)" }}>
             {secondaryText}
           </Link>
         </div>

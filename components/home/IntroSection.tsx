@@ -28,12 +28,13 @@ export function IntroSection({ data }: { data?: Record<string, unknown> | null }
   const cards = cardsList?.length ? cardsList : defaultCards;
 
   return (
-    <SectionContainer background="charcoal" size="lg">
+    <SectionContainer background="light" size="lg">
       <SectionHeader
         eyebrow={eyebrow}
         title={title}
         subtitle={subtitle}
         align="center"
+        theme="light"
       />
 
       <div
@@ -45,10 +46,10 @@ export function IntroSection({ data }: { data?: Record<string, unknown> | null }
         }}
       >
         {(cards as Record<string, string>[]).map((card, index: number) => (
-          <div key={index} className={`lam-card ${index === 1 ? 'lam-card--flat' : ''}`}>
+          <div key={index} className="lam-card lam-card--gold">
             <p className="lam-eyebrow" style={{ marginBottom: "1rem" }}>{card.eyebrow}</p>
-            <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "1rem" }}>{card.title}</h3>
-            <p style={{ color: "var(--lam-silver-light)", lineHeight: 1.6 }}>
+            <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "1rem", color: "var(--lam-dark-text)" }}>{card.title}</h3>
+            <p style={{ color: "var(--lam-dark-text-muted)", lineHeight: 1.6 }}>
               {card.description}
             </p>
           </div>

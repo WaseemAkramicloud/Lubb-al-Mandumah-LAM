@@ -40,7 +40,7 @@ export default async function ProductsPage({ searchParams }: Props) {
         subtitle={heroData.subtitle || routeMeta.subtitle}
       />
 
-      <SectionContainer background="black" size="lg">
+      <SectionContainer background="soft-grey" size="lg">
         <ProductCategoryFilter activeCategory={categoryParam} />
 
         {products.length === 0 ? (

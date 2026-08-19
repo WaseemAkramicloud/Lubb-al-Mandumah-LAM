@@ -29,6 +29,16 @@
   --lam-gold-dark:    #a8872e;
   --lam-gold-subtle:  rgba(201, 168, 76, 0.12);
 
+  /* Light Corporate Theme Tokens */
+  --lam-light-bg:     #FAFAFC;
+  --lam-stone-bg:     #F3F4F6;
+  --lam-grey-bg:      #EBF0F5;
+  --lam-light-surface: #FFFFFF;
+  --lam-light-card:    #FFFFFF;
+  --lam-light-border:  #E2E8F0;
+  --lam-dark-text:     #0F172A;
+  --lam-dark-text-muted: #475569;
+
   /* Gradients */
   --lam-gradient-gold: linear-gradient(135deg, #c9a84c 0%, #e8d08a 50%, #a8872e 100%);
   --lam-gradient-dark: linear-gradient(180deg, #1a1a1e 0%, #111114 100%);
@@ -158,6 +168,35 @@ code, pre {
 .lam-section--sm  { padding-block: 3rem; }
 .lam-section--lg  { padding-block: 7.5rem; }
 .lam-section--xl  { padding-block: 10rem; }
+
+/* ── Light Section Overrides ─────────────────────────────── */
+.lam-section--light {
+  color: var(--lam-dark-text);
+}
+.lam-section--light h1,
+.lam-section--light h2,
+.lam-section--light h3,
+.lam-section--light h4 {
+  color: var(--lam-dark-text);
+}
+.lam-section--light p {
+  color: var(--lam-dark-text-muted);
+}
+.lam-section--light .lam-card {
+  background: var(--lam-light-surface);
+  border: 1px solid var(--lam-light-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+.lam-section--light .lam-card h3 {
+  color: var(--lam-dark-text);
+}
+.lam-section--light .lam-card p {
+  color: var(--lam-dark-text-muted);
+}
+.lam-section--light .lam-card--gold:hover {
+  border-color: var(--lam-gold);
+  box-shadow: 0 8px 30px rgba(201, 168, 76, 0.2);
+}
 
 /* ── Utility: Gold accent line ────────────────────────────── */
 .lam-accent-line {

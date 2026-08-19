@@ -68,10 +68,12 @@ export async function saveProductDraft(formData: FormData) {
   } else {
     const { error } = await supabase.from('cms_products').update(payload).eq('slug', slug)
     if (error) throw new Error(error.message)
+    await supabase.from('lam_products').update({ category: payload.category as string }).eq('slug', slug)
   }
 
   await logAudit('cms_product', slug, 'draft_saved', { payload })
 
+  revalidatePath('/', 'layout')
   revalidatePath('/products')
   revalidatePath(`/products/${slug}`)
   revalidatePath('/control-panel/modules/products')

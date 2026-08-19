@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { hasPermission } from '@/lib/auth/permissions'
 
 /**
@@ -8,7 +8,12 @@ import { hasPermission } from '@/lib/auth/permissions'
  */
 export async function getCmsPage(slug: string, options?: { preview?: boolean }): Promise<Record<string, Record<string, unknown>>> {
   try {
-    const supabase = await createClient()
+    let supabase: any
+    try {
+      supabase = await createClient()
+    } catch {
+      supabase = getSupabaseAdmin()
+    }
     
     // We only need the published content for the public site, unless preview is requested
     const { data: sections, error } = await supabase
@@ -24,7 +29,11 @@ export async function getCmsPage(slug: string, options?: { preview?: boolean }):
     // Check auth for preview
     let allowPreview = false;
     if (options?.preview) {
-      allowPreview = await hasPermission('site_management', 'view');
+      try {
+        allowPreview = await hasPermission('site_management', 'view');
+      } catch {
+        allowPreview = false;
+      }
     }
     
     const pageData: Record<string, Record<string, unknown>> = {}

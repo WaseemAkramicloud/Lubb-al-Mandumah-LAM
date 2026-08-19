@@ -4,6 +4,7 @@ interface SectionHeaderProps {
   subtitle?: string;
   align?: "left" | "center";
   titleSize?: "sm" | "base" | "lg";
+  theme?: "light" | "dark" | "auto";
 }
 
 const titleSizeMap = {
@@ -18,7 +19,10 @@ export function SectionHeader({
   subtitle,
   align = "left",
   titleSize = "base",
+  theme = "auto",
 }: SectionHeaderProps) {
+  const isLight = theme === "light";
+
   return (
     <div
       style={{
@@ -28,7 +32,7 @@ export function SectionHeader({
       }}
     >
       {eyebrow && (
-        <p className="lam-eyebrow" style={{ marginBottom: "0.75rem" }}>
+        <p className="lam-eyebrow" style={{ marginBottom: "0.75rem", color: "var(--lam-gold)" }}>
           {eyebrow}
         </p>
       )}
@@ -39,7 +43,7 @@ export function SectionHeader({
           fontSize: titleSizeMap[titleSize],
           fontWeight: 600,
           letterSpacing: "-0.02em",
-          color: "var(--lam-white)",
+          color: isLight ? "var(--lam-dark-text)" : "inherit",
           marginBottom: subtitle ? "1rem" : 0,
         }}
       >
@@ -49,7 +53,8 @@ export function SectionHeader({
         <p
           style={{
             fontSize: "var(--text-lg)",
-            color: "var(--lam-silver-light)",
+            color: isLight ? "var(--lam-dark-text-muted)" : "inherit",
+            opacity: isLight ? 0.9 : 0.85,
             lineHeight: 1.65,
             maxWidth: "600px",
             ...(align === "center" ? { marginInline: "auto" } : {}),
