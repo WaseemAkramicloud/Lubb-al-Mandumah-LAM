@@ -1,54 +1,22 @@
 'use client'
 
-import { useState, use } from 'react'
-import { useRouter } from 'next/navigation'
-import { customerLogin } from '@/lib/actions/customer-auth'
+import { useState, useActionState, use } from 'react'
+import { customerLoginAction, CustomerLoginResult } from '@/lib/actions/customer-auth'
 import Link from 'next/link'
 
 export default function CustomerLoginPage(props: { searchParams: Promise<{ redirect_to?: string; product?: string; error?: string; error_description?: string }> }) {
   const searchParams = use(props.searchParams)
-  const router = useRouter()
   const [loginMode, setLoginMode] = useState<'employee' | 'owner'>('employee')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(searchParams.error_description || '')
 
   const redirectTo = searchParams.redirect_to || '/portal'
   const requestingProduct = searchParams.product || ''
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    // Capture form element synchronously before async state updates
-    const formElement = e.currentTarget
-    setLoading(true)
-    setError('')
-
-    try {
-      const formData = new FormData(formElement)
-      formData.set('return_to', redirectTo)
-      formData.set('login_mode', loginMode)
-      if (requestingProduct) {
-        formData.set('requesting_product', requestingProduct)
-      }
-
-      const res = await customerLogin(formData)
-
-      if (res.success) {
-        if (res.redirectUrl) {
-          const targetUrl = res.redirectUrl.startsWith('/') ? window.location.origin + res.redirectUrl : res.redirectUrl
-          window.location.href = targetUrl
-        } else {
-          router.push('/portal')
-        }
-        // Keep loading=true during redirect navigation
-      } else {
-        setError(res.error || 'Authentication failed.')
-        setLoading(false)
-      }
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.')
-      setLoading(false)
-    }
+  const initialState: CustomerLoginResult = {
+    success: false,
+    error: searchParams.error_description || (searchParams.error === 'access_denied' ? 'Access denied to this product workspace.' : '')
   }
+
+  const [state, formAction, isPending] = useActionState(customerLoginAction, initialState)
 
   return (
     <div style={{
@@ -97,7 +65,7 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
         }}>
           <button
             type="button"
-            onClick={() => { setLoginMode('employee'); setError('') }}
+            onClick={() => setLoginMode('employee')}
             style={{
               padding: '0.65rem 0.5rem',
               borderRadius: '4px',
@@ -116,7 +84,7 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
           </button>
           <button
             type="button"
-            onClick={() => { setLoginMode('owner'); setError('') }}
+            onClick={() => setLoginMode('owner')}
             style={{
               padding: '0.65rem 0.5rem',
               borderRadius: '4px',
@@ -135,7 +103,7 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
           </button>
         </div>
 
-        {error && (
+        {state.error && (
           <div style={{
             padding: '0.85rem',
             background: 'rgba(231, 76, 60, 0.1)',
@@ -146,11 +114,11 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
             marginBottom: '1.5rem',
             lineHeight: 1.4
           }}>
-            {error}
+            {state.error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <input type="hidden" name="return_to" value={redirectTo} />
           <input type="hidden" name="login_mode" value={loginMode} />
           {requestingProduct && <input type="hidden" name="requesting_product" value={requestingProduct} />}
@@ -225,11 +193,11 @@ export default function CustomerLoginPage(props: { searchParams: Promise<{ redir
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isPending}
             className="btn btn-primary"
             style={{ width: '100%', marginTop: '0.5rem', padding: '0.85rem' }}
           >
-            {loading ? 'Authenticating...' : loginMode === 'employee' ? 'Sign In to Workspace' : 'Sign In to Owner Console'}
+            {isPending ? 'Authenticating...' : loginMode === 'employee' ? 'Sign In to Workspace' : 'Sign In to Owner Console'}
           </button>
         </form>
 

@@ -752,3 +752,9 @@ Based on actual codebase inspection (`.env.local`, `next.config.ts`, `lib/sso/jw
      - Kept loading state active during redirect navigation so Safari users visually see active progress instead of premature button reset.
      - Enhanced `customerLogin` in `lib/actions/customer-auth.ts` to return clear error messages (`Workspace Code, User ID, and Password are required`) if fields are missing in employee mode.
      - Preserves full OIDC authorization return URL (`/api/sso/authorize?client_id=lam_app_nexora...`), resuming the NEXORA OIDC transaction and redirecting back to `https://nexora.lubbalmandumah.com/api/auth/callback`.
+  16. **Shared LAM ID Native Server Action Architecture & Safari Redirection Fix**:
+     - Refactored `app/id/login/page.tsx` to use native React 19 / Next.js `useActionState` and `<form action={formAction}>`.
+     - Implemented `customerLoginAction` in `lib/actions/customer-auth.ts` which executes server-side HTTP `redirect()` upon successful authentication for both Company Owner and Workspace Employee login modes.
+     - Updated `getSafeReturnUrl` in production so default `/portal` return URLs for Owner logins map to `https://access.lubbalmandumah.com/portal`, preventing `proxy.ts` loopbacks on `id.lubbalmandumah.com`.
+     - Added safe diagnostic logging (`[LAM ID AUTH TRACE]`) for production debugging with zero password/secret leakage.
+     - Eliminates client-side JS navigation dependencies, browser event timing issues, and Safari ITP action revalidation interference for both Owner and Employee login flows.

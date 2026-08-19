@@ -6,16 +6,24 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { logCustomerAudit } from '@/lib/sso/sso-service'
 import { revalidatePath } from 'next/cache'
 
+import { redirect } from 'next/navigation'
+
 const SESSION_COOKIE_NAME = 'lam_customer_session'
 const COOKIE_DOMAIN = process.env.NODE_ENV === 'production' ? '.lubbalmandumah.com' : undefined
 
 export async function getSafeReturnUrl(returnTo: string | undefined): Promise<string> {
   const isProd = process.env.NODE_ENV === 'production'
-  const defaultTarget = isProd ? 'https://access.lubbalmandumah.com/portal' : '/portal'
+  const defaultOwnerTarget = isProd ? 'https://access.lubbalmandumah.com/portal' : '/portal'
 
-  if (!returnTo) return defaultTarget
+  if (!returnTo) return defaultOwnerTarget
 
   const trimmed = returnTo.trim()
+
+  // In production, relative '/portal' must map to canonical Owner Console host
+  if (trimmed === '/portal' || trimmed === '/portal/') {
+    return defaultOwnerTarget
+  }
+
   if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
     return trimmed
   }
@@ -33,7 +41,7 @@ export async function getSafeReturnUrl(returnTo: string | undefined): Promise<st
     }
   } catch {}
 
-  return defaultTarget
+  return defaultOwnerTarget
 }
 
 export interface CustomerLoginResult {
@@ -45,6 +53,30 @@ export interface CustomerLoginResult {
   workspaceId?: string
   workspaceCode?: string
   productSlug?: string
+}
+
+/**
+ * Server Action handler for useActionState / native form dispatches.
+ * Performs server-side HTTP redirection on success for 100% browser navigation reliability.
+ */
+export async function customerLoginAction(prevState: any, formData: FormData): Promise<CustomerLoginResult> {
+  let res: CustomerLoginResult
+  try {
+    res = await customerLogin(formData)
+  } catch (err: any) {
+    if (err?.digest?.startsWith('NEXT_REDIRECT')) {
+      throw err
+    }
+    console.error('[LAM ID LOGIN ACTION ERROR]', err)
+    return { success: false, error: err.message || 'An unexpected authentication error occurred.' }
+  }
+
+  if (res.success && res.redirectUrl) {
+    console.log('[LAM ID LOGIN SUCCESS REDIRECT]', { redirectUrl: res.redirectUrl })
+    redirect(res.redirectUrl)
+  }
+
+  return res
 }
 
 export async function customerLogin(formDataInput: FormData | Record<string, any>): Promise<CustomerLoginResult> {
@@ -66,6 +98,16 @@ export async function customerLogin(formDataInput: FormData | Record<string, any
   const returnTo = getValue('return_to', 'returnTo')
   const safeReturnTo = await getSafeReturnUrl(returnTo)
   const requestingProduct = getValue('requesting_product', 'requestingProduct')?.trim().toLowerCase()
+
+  console.log('[LAM ID AUTH TRACE]', {
+    mode,
+    workspaceCodePresent: Boolean(workspaceCode),
+    userIdPresent: Boolean(userId),
+    emailPresent: Boolean(email),
+    hasPassword: Boolean(password),
+    returnToRaw: returnTo || undefined,
+    resolvedReturnUrl: safeReturnTo
+  })
 
   // Process mode-specific login requirements
   if (mode === 'employee' || (workspaceCode && userId)) {
