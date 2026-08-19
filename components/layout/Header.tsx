@@ -82,13 +82,10 @@ export default function Header() {
                 fontSize: "1.6rem",
                 fontWeight: 700,
                 letterSpacing: "-0.03em",
-                background: "var(--lam-gradient-gold)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
+                color: isDarkBg ? "#FFFFFF" : "#0F172A",
               }}
             >
-              L<span style={{ fontStyle: "italic" }}>Λ</span>M
+              L<span style={{ fontStyle: "italic", color: isDarkBg ? "#38BDF8" : "#2563EB" }}>Λ</span>M
             </span>
             <span
               style={{

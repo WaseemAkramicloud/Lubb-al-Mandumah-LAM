@@ -14,7 +14,7 @@ export const CATEGORIES = [
 
 export function ProductCategoryFilter({ activeCategory }: ProductCategoryFilterProps) {
   return (
-    <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "3rem" }}>
+    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
       {CATEGORIES.map((category) => {
         const isActive = activeCategory === category;
         const href = category === "All" ? "/products" : `/products?category=${encodeURIComponent(category)}`;
@@ -24,15 +24,15 @@ export function ProductCategoryFilter({ activeCategory }: ProductCategoryFilterP
             key={category}
             href={href}
             style={{
-              padding: "0.5rem 1.5rem",
-              borderRadius: "var(--radius-full)",
-              border: `1px solid ${isActive ? "var(--lam-gold)" : "var(--lam-border-light)"}`,
-              background: isActive ? "var(--lam-gold)" : "var(--lam-light-surface)",
-              color: isActive ? "#000000" : "var(--lam-dark-text)",
+              padding: "0.5rem 1.25rem",
+              borderRadius: "0.375rem",
+              border: `1px solid ${isActive ? "#0F172A" : "#CBD5E1"}`,
+              background: isActive ? "#0F172A" : "#FFFFFF",
+              color: isActive ? "#FFFFFF" : "#0F172A",
               fontSize: "var(--text-sm)",
-              fontWeight: isActive ? 600 : 500,
+              fontWeight: 600,
               textDecoration: "none",
-              boxShadow: isActive ? "0 2px 8px rgba(201, 168, 76, 0.25)" : "0 1px 3px rgba(0,0,0,0.05)",
+              boxShadow: isActive ? "0 2px 8px rgba(15,23,42,0.12)" : "none",
               transition: "all 0.2s ease",
             }}
           >

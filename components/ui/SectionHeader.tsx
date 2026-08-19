@@ -8,9 +8,9 @@ interface SectionHeaderProps {
 }
 
 const titleSizeMap = {
-  sm: "var(--text-3xl)",
-  base: "var(--text-4xl)",
-  lg: "var(--text-5xl)",
+  sm: "var(--text-2xl)",
+  base: "var(--text-3xl)",
+  lg: "var(--text-4xl)",
 };
 
 export function SectionHeader({
@@ -21,30 +21,39 @@ export function SectionHeader({
   titleSize = "base",
   theme = "auto",
 }: SectionHeaderProps) {
-  const isLight = theme === "light";
+  const isLight = theme !== "dark";
 
   return (
     <div
       style={{
         textAlign: align,
-        marginBottom: "3rem",
+        marginBottom: "2.5rem",
         ...(align === "center" ? { maxWidth: "680px", marginInline: "auto" } : {}),
       }}
     >
       {eyebrow && (
-        <p className="lam-eyebrow" style={{ marginBottom: "0.75rem", color: "var(--lam-gold)" }}>
+        <p
+          style={{
+            fontSize: "var(--text-xs)",
+            fontWeight: 600,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#2563EB",
+            marginBottom: "0.6rem",
+          }}
+        >
           {eyebrow}
         </p>
       )}
-      <div className="lam-accent-line" style={align === "center" ? { margin: "0 auto 1rem" } : {}} />
+      <div className="lam-accent-line" style={align === "center" ? { margin: "0 auto 1rem" } : { marginBottom: "1rem" }} />
       <h2
         style={{
           fontFamily: "var(--font-display)",
           fontSize: titleSizeMap[titleSize],
           fontWeight: 600,
-          letterSpacing: "-0.02em",
-          color: isLight ? "var(--lam-dark-text)" : "inherit",
-          marginBottom: subtitle ? "1rem" : 0,
+          letterSpacing: "-0.015em",
+          color: isLight ? "#0F172A" : "#FFFFFF",
+          marginBottom: subtitle ? "0.85rem" : 0,
         }}
       >
         {title}
@@ -52,11 +61,10 @@ export function SectionHeader({
       {subtitle && (
         <p
           style={{
-            fontSize: "var(--text-lg)",
-            color: isLight ? "var(--lam-dark-text-muted)" : "inherit",
-            opacity: isLight ? 0.9 : 0.85,
+            fontSize: "var(--text-base)",
+            color: isLight ? "#475569" : "rgba(255,255,255,0.85)",
             lineHeight: 1.65,
-            maxWidth: "600px",
+            maxWidth: "620px",
             ...(align === "center" ? { marginInline: "auto" } : {}),
           }}
         >

@@ -32,16 +32,16 @@ export function InsightsPreview() {
 
   return (
     <SectionContainer background="soft-grey" size="lg">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "2rem", marginBottom: "3rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "2rem", marginBottom: "2.5rem" }}>
         <div style={{ flex: 1, minWidth: "300px" }}>
           <SectionHeader
             eyebrow="Company News"
-            title="LATEST INSIGHTS"
+            title="Latest Insights"
             subtitle="Explore our latest thoughts on software engineering, enterprise scale, and compliance."
             theme="light"
           />
         </div>
-        <Link href="/insights" className="btn btn-secondary" style={{ color: "var(--lam-dark-text)", borderColor: "var(--lam-light-border)" }}>
+        <Link href="/insights" className="btn btn-secondary">
           View All Insights &rarr;
         </Link>
       </div>
@@ -50,14 +50,14 @@ export function InsightsPreview() {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-          gap: "2rem",
+          gap: "1.5rem",
         }}
       >
         {insights.map((post) => (
           <Link key={post.id} href={post.href} style={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", height: "100%" }}>
-            <div className="lam-card lam-card--gold" style={{ display: "flex", flexDirection: "column", height: "100%", transition: "border-color 0.3s" }}>
+            <div className="lam-card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                <span className="lam-badge" style={{ background: "rgba(201, 168, 76, 0.12)", color: "var(--lam-gold)", border: "1px solid rgba(201, 168, 76, 0.3)" }}>
+                <span className="lam-badge" style={{ background: "rgba(37,99,235,0.08)", color: "#2563EB", border: "1px solid rgba(37,99,235,0.2)" }}>
                   {post.category}
                 </span>
                 <span style={{ fontSize: "var(--text-xs)", color: "var(--lam-dark-text-muted)" }}>{post.readTime}</span>
@@ -67,9 +67,9 @@ export function InsightsPreview() {
                 {post.title}
               </h3>
               
-              <div style={{ marginTop: "auto", paddingTop: "1.5rem", borderTop: "1px solid var(--lam-light-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "var(--text-sm)", color: "var(--lam-dark-text-muted)" }}>{post.date}</span>
-                <span style={{ color: "var(--lam-gold)", fontSize: "1.2rem" }}>&rarr;</span>
+              <div style={{ marginTop: "auto", paddingTop: "1.25rem", borderTop: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--lam-dark-text-muted)" }}>{post.date}</span>
+                <span style={{ color: "#2563EB", fontSize: "1.1rem" }}>&rarr;</span>
               </div>
             </div>
           </Link>

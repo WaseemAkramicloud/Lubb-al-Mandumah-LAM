@@ -7,10 +7,10 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   return (
-    <div className="lam-card lam-card--gold" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+    <div className="lam-card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
         <div>
-          <span className="lam-eyebrow" style={{ color: "var(--lam-gold)", marginBottom: "0.4rem", display: "block" }}>
+          <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "0.35rem" }}>
             {product.category}
           </span>
           <h3 style={{ fontSize: "var(--text-2xl)", margin: 0, color: "var(--lam-dark-text)" }}>{product.name}</h3>
@@ -20,15 +20,15 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
       </div>
       
-      <p style={{ fontWeight: 600, color: "var(--lam-dark-text)", marginBottom: "0.5rem" }}>
+      <p style={{ fontWeight: 600, color: "var(--lam-dark-text)", marginBottom: "0.5rem", fontSize: "var(--text-sm)" }}>
         {product.tagline}
       </p>
-      <p style={{ color: "var(--lam-dark-text-muted)", marginBottom: "2rem", flex: 1, lineHeight: 1.6 }}>
+      <p style={{ color: "var(--lam-dark-text-muted)", marginBottom: "1.75rem", flex: 1, lineHeight: 1.6, fontSize: "var(--text-sm)" }}>
         {product.description}
       </p>
       
-      <Link href={product.href} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
-        Explore {product.name}
+      <Link href={product.href} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center" }}>
+        Explore {product.name} &rarr;
       </Link>
     </div>
   );

@@ -3,7 +3,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 
 export function IntroSection({ data }: { data?: Record<string, unknown> | null }) {
   const eyebrow = (data?.eyebrow as string) || "The Ecosystem Core"
-  const title = (data?.title as string) || "FROM ENTERPRISE SYSTEMS TO EVERYDAY MOBILE TOOLS"
+  const title = (data?.title as string) || "From Enterprise Systems to Everyday Mobile Tools"
   const subtitle = (data?.subtitle as string) || "LΛM is the parent company and foundational technology layer orchestrating an expanding ecosystem of SaaS products, platforms, and mobile applications."
   
   const defaultCards = [
@@ -39,17 +39,19 @@ export function IntroSection({ data }: { data?: Record<string, unknown> | null }
 
       <div
         style={{
-          marginTop: "4rem",
+          marginTop: "3rem",
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
           gap: "2rem",
         }}
       >
         {(cards as Record<string, string>[]).map((card, index: number) => (
-          <div key={index} className="lam-card lam-card--gold">
-            <p className="lam-eyebrow" style={{ marginBottom: "1rem" }}>{card.eyebrow}</p>
-            <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "1rem", color: "var(--lam-dark-text)" }}>{card.title}</h3>
-            <p style={{ color: "var(--lam-dark-text-muted)", lineHeight: 1.6 }}>
+          <div key={index} className="lam-card">
+            <p style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem" }}>
+              {card.eyebrow}
+            </p>
+            <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "0.85rem", color: "var(--lam-dark-text)" }}>{card.title}</h3>
+            <p style={{ color: "var(--lam-dark-text-muted)", lineHeight: 1.6, fontSize: "var(--text-sm)" }}>
               {card.description}
             </p>
           </div>

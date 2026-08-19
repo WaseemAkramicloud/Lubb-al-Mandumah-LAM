@@ -3,7 +3,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 
 export function WhyLamSection({ data }: { data?: Record<string, unknown> | null }) {
   const eyebrow = (data?.eyebrow as string) || "The Ecosystem Advantage"
-  const title = (data?.title as string) || "WHY CHOOSE LΛM"
+  const title = (data?.title as string) || "Why Choose LΛM"
   const subtitle = (data?.subtitle as string) || "Unifying fragmented business operations into a single, cohesive command plane."
 
   const defaultPoints = [
@@ -35,19 +35,19 @@ export function WhyLamSection({ data }: { data?: Record<string, unknown> | null 
 
       <div
         style={{
-          marginTop: "4rem",
+          marginTop: "3rem",
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
           gap: "2.5rem",
         }}
       >
         {(points as Record<string, string>[]).map((point, index: number) => (
-          <div key={index} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--lam-gradient-gold)", display: "flex", alignItems: "center", justifyContent: "center", color: "#000", fontWeight: "bold" }}>
-              {index + 1}
+          <div key={index} className="lam-card" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ width: "36px", height: "36px", borderRadius: "0.375rem", background: "#0F172A", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFFFFF", fontWeight: "600", fontSize: "0.9rem" }}>
+              0{index + 1}
             </div>
             <h3 style={{ fontSize: "var(--text-xl)", color: "var(--lam-dark-text)" }}>{point.title}</h3>
-            <p style={{ color: "var(--lam-dark-text-muted)", lineHeight: 1.6 }}>
+            <p style={{ color: "var(--lam-dark-text-muted)", lineHeight: 1.6, fontSize: "var(--text-sm)" }}>
               {point.description}
             </p>
           </div>

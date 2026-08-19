@@ -3,51 +3,52 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 
 export function SecuritySection() {
   return (
-    <SectionContainer background="charcoal" size="lg">
+    <SectionContainer background="charcoal" size="lg" style={{ background: "#0F172A" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "4rem", alignItems: "center" }}>
         <div style={{ flex: 1, minWidth: "300px" }}>
           <SectionHeader
             eyebrow="Security & Governance"
-            title="UNCOMPROMISING DATA SOVEREIGNTY"
-            subtitle="Built to meet the stringent requirements of diplomatic missions and global financial institutions."
+            title="Uncompromising Data Sovereignty"
+            subtitle="Engineered to satisfy the requirements of diplomatic missions and enterprise organizations."
+            theme="dark"
           />
-          <p style={{ color: "var(--lam-silver-light)", lineHeight: 1.6, marginBottom: "2rem" }}>
-            The LΛM ecosystem employs military-grade encryption and zero-trust architecture. Data isolation is maintained through strict row-level security and federated access protocols, ensuring that your enterprise information remains completely sovereign.
+          <p style={{ color: "#94A3B8", lineHeight: 1.65, marginBottom: "2rem", fontSize: "var(--text-sm)" }}>
+            The LΛM ecosystem employs enterprise encryption and zero-trust architecture. Data isolation is maintained through strict row-level security and federated access protocols, ensuring that your enterprise information remains completely sovereign.
           </p>
           <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
             <li style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-              <span style={{ color: "var(--lam-gold)" }}>✓</span>
-              <span style={{ color: "var(--lam-white)" }}>SOC2 Type II & GDPR Compliant</span>
+              <span style={{ color: "#38BDF8", fontWeight: "bold" }}>✓</span>
+              <span style={{ color: "#FFFFFF", fontSize: "var(--text-sm)" }}>SOC2 Type II & GDPR Compliant</span>
             </li>
             <li style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-              <span style={{ color: "var(--lam-gold)" }}>✓</span>
-              <span style={{ color: "var(--lam-white)" }}>Role-Based Access Control (RBAC)</span>
+              <span style={{ color: "#38BDF8", fontWeight: "bold" }}>✓</span>
+              <span style={{ color: "#FFFFFF", fontSize: "var(--text-sm)" }}>Role-Based Access Control (RBAC)</span>
             </li>
             <li style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-              <span style={{ color: "var(--lam-gold)" }}>✓</span>
-              <span style={{ color: "var(--lam-white)" }}>End-to-End Encrypted Transit</span>
+              <span style={{ color: "#38BDF8", fontWeight: "bold" }}>✓</span>
+              <span style={{ color: "#FFFFFF", fontSize: "var(--text-sm)" }}>End-to-End Encrypted Transit</span>
             </li>
           </ul>
         </div>
         
         <div style={{ flex: 1, minWidth: "300px" }}>
-          <div style={{ background: "var(--lam-black)", padding: "3rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--lam-border)" }}>
+          <div style={{ background: "#1E293B", padding: "2.5rem", borderRadius: "var(--radius-lg)", border: "1px solid #334155" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
               <div>
-                <p style={{ fontFamily: "var(--font-display)", fontSize: "2.5rem", fontWeight: 700, color: "var(--lam-white)", lineHeight: 1 }}>99.999%</p>
-                <p className="lam-eyebrow" style={{ marginTop: "0.5rem", color: "var(--lam-silver)" }}>Uptime SLA</p>
+                <p style={{ fontFamily: "var(--font-display)", fontSize: "2.25rem", fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>99.999%</p>
+                <p style={{ marginTop: "0.5rem", color: "#94A3B8", fontSize: "var(--text-xs)", letterSpacing: "0.06em", textTransform: "uppercase" }}>Uptime SLA</p>
               </div>
               <div>
-                <p style={{ fontFamily: "var(--font-display)", fontSize: "2.5rem", fontWeight: 700, color: "var(--lam-white)", lineHeight: 1 }}>256-bit</p>
-                <p className="lam-eyebrow" style={{ marginTop: "0.5rem", color: "var(--lam-silver)" }}>AES Encryption</p>
+                <p style={{ fontFamily: "var(--font-display)", fontSize: "2.25rem", fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>256-bit</p>
+                <p style={{ marginTop: "0.5rem", color: "#94A3B8", fontSize: "var(--text-xs)", letterSpacing: "0.06em", textTransform: "uppercase" }}>AES Encryption</p>
               </div>
               <div>
-                <p style={{ fontFamily: "var(--font-display)", fontSize: "2.5rem", fontWeight: 700, color: "var(--lam-white)", lineHeight: 1 }}>ISO</p>
-                <p className="lam-eyebrow" style={{ marginTop: "0.5rem", color: "var(--lam-silver)" }}>27001 Certified</p>
+                <p style={{ fontFamily: "var(--font-display)", fontSize: "2.25rem", fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>ISO</p>
+                <p style={{ marginTop: "0.5rem", color: "#94A3B8", fontSize: "var(--text-xs)", letterSpacing: "0.06em", textTransform: "uppercase" }}>27001 Certified</p>
               </div>
               <div>
-                <p style={{ fontFamily: "var(--font-display)", fontSize: "2.5rem", fontWeight: 700, color: "var(--lam-white)", lineHeight: 1 }}>&lt;10ms</p>
-                <p className="lam-eyebrow" style={{ marginTop: "0.5rem", color: "var(--lam-silver)" }}>Isolation Latency</p>
+                <p style={{ fontFamily: "var(--font-display)", fontSize: "2.25rem", fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>&lt;10ms</p>
+                <p style={{ marginTop: "0.5rem", color: "#94A3B8", fontSize: "var(--text-xs)", letterSpacing: "0.06em", textTransform: "uppercase" }}>Isolation Latency</p>
               </div>
             </div>
           </div>

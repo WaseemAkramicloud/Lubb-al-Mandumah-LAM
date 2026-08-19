@@ -6,7 +6,6 @@ interface ProductHeroProps {
 }
 
 export function ProductHero({ product }: ProductHeroProps) {
-  // Determine CTA text and route based on commercial rule
   let ctaText = "Request Demo";
   let ctaHref = "/request-demo";
 
@@ -23,8 +22,8 @@ export function ProductHero({ product }: ProductHeroProps) {
       ctaHref = "/contact";
       break;
     case "app":
-      ctaText = "View on App Store";
-      ctaHref = "#"; // Placeholder for app links
+      ctaText = "View Application";
+      ctaHref = "/contact";
       break;
     case "demo":
     default:
@@ -36,16 +35,16 @@ export function ProductHero({ product }: ProductHeroProps) {
   return (
     <div
       style={{
-        paddingTop: "calc(var(--header-height) + 4rem)",
-        paddingBottom: "6rem",
-        background: "var(--lam-gradient-hero)",
-        borderBottom: "1px solid var(--lam-border)",
+        paddingTop: "calc(var(--header-height) + 3.5rem)",
+        paddingBottom: "4.5rem",
+        background: "linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)",
+        borderBottom: "1px solid #E2E8F0",
         position: "relative",
       }}
     >
       <div className="lam-container" style={{ position: "relative", zIndex: 2 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
-          <p className="lam-eyebrow" style={{ color: "var(--lam-gold)", margin: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.25rem" }}>
+          <p style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>
             {product.category}
           </p>
           {product.restricted && (
@@ -53,21 +52,21 @@ export function ProductHero({ product }: ProductHeroProps) {
           )}
         </div>
         
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(3rem, 6vw, 5rem)", marginBottom: "1.5rem", lineHeight: 1.1 }}>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.75rem, 5.5vw, 4.5rem)", marginBottom: "1rem", lineHeight: 1.1, color: "var(--lam-dark-text)" }}>
           {product.name}
         </h1>
         
-        <p style={{ fontSize: "var(--text-2xl)", color: "var(--lam-white)", marginBottom: "1.5rem", fontWeight: 500 }}>
+        <p style={{ fontSize: "var(--text-xl)", color: "var(--lam-dark-text)", marginBottom: "1.25rem", fontWeight: 600 }}>
           {product.tagline}
         </p>
         
-        <p style={{ fontSize: "var(--text-lg)", color: "var(--lam-silver-light)", maxWidth: "800px", marginBottom: "3rem", lineHeight: 1.6 }}>
+        <p style={{ fontSize: "var(--text-lg)", color: "var(--lam-dark-text-muted)", maxWidth: "800px", marginBottom: "2.5rem", lineHeight: 1.6 }}>
           {product.description}
         </p>
 
         <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
           <Link href={ctaHref} className="btn btn-primary btn-lg">
-            {ctaText}
+            {ctaText} &rarr;
           </Link>
           <a href="#details" className="btn btn-secondary btn-lg">
             View Capabilities

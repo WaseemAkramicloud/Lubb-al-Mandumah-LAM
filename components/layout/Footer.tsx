@@ -11,10 +11,11 @@ export default function Footer() {
     <footer
       role="contentinfo"
       style={{
-        background: "var(--lam-charcoal)",
-        borderTop: "1px solid var(--lam-border)",
+        background: "#0F172A",
+        borderTop: "1px solid #1E293B",
         paddingTop: "4rem",
-        paddingBottom: "2rem",
+        paddingBottom: "2.5rem",
+        color: "#94A3B8",
       }}
     >
       <div className="lam-container">
@@ -29,40 +30,37 @@ export default function Footer() {
           className="footer-grid"
         >
           {/* Brand column */}
-          <div style={{ maxWidth: "280px" }}>
+          <div style={{ maxWidth: "300px" }}>
             <Link
               href="/"
               aria-label={`${siteConfig.name} — Home`}
-              style={{ display: "inline-block", marginBottom: "1rem" }}
+              style={{ display: "inline-block", marginBottom: "0.75rem" }}
             >
               <span
                 style={{
                   fontFamily: "var(--font-display)",
-                  fontSize: "2rem",
+                  fontSize: "1.85rem",
                   fontWeight: 700,
-                  background: "var(--lam-gradient-gold)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
+                  color: "#FFFFFF",
                   letterSpacing: "-0.03em",
                 }}
               >
-                L<span style={{ fontStyle: "italic" }}>Λ</span>M
+                L<span style={{ fontStyle: "italic", color: "#38BDF8" }}>Λ</span>M
               </span>
             </Link>
             <p
               style={{
                 fontSize: "var(--text-xs)",
                 fontWeight: 600,
-                letterSpacing: "0.15em",
+                letterSpacing: "0.1em",
                 textTransform: "uppercase",
-                color: "var(--lam-silver)",
-                marginBottom: "1rem",
+                color: "#64748B",
+                marginBottom: "0.85rem",
               }}
             >
               {siteConfig.tagline}
             </p>
-            <p style={{ fontSize: "var(--text-sm)", color: "var(--lam-silver)", lineHeight: 1.6 }}>
+            <p style={{ fontSize: "var(--text-sm)", color: "#94A3B8", lineHeight: 1.6 }}>
               Building the software ecosystem that powers ambitious organisations worldwide.
             </p>
           </div>
@@ -77,13 +75,12 @@ export default function Footer() {
           <FooterColumn title="Solutions" links={footerNav.solutions} />
         </div>
 
-        {/* ── Gold divider ── */}
+        {/* ── Divider ── */}
         <div
           style={{
             height: "1px",
-            background: "linear-gradient(90deg, var(--lam-gold-dark), transparent)",
-            marginBottom: "1.5rem",
-            opacity: 0.4,
+            background: "#1E293B",
+            marginBottom: "1.75rem",
           }}
           role="separator"
           aria-hidden="true"
@@ -99,7 +96,7 @@ export default function Footer() {
             gap: "1rem",
           }}
         >
-          <p style={{ fontSize: "var(--text-xs)", color: "var(--lam-silver-dim)" }}>
+          <p style={{ fontSize: "var(--text-xs)", color: "#64748B" }}>
             © {currentYear} {siteConfig.name}. All rights reserved.
           </p>
 
@@ -108,7 +105,7 @@ export default function Footer() {
               <Link
                 key={item.href}
                 href={item.href}
-                style={{ fontSize: "var(--text-xs)", color: "var(--lam-silver-dim)" }}
+                style={{ fontSize: "var(--text-xs)", color: "#64748B" }}
               >
                 {item.label}
               </Link>
@@ -119,9 +116,8 @@ export default function Footer() {
               href="/id/login"
               style={{
                 fontSize: "var(--text-xs)",
-                color: "var(--lam-silver-dim)",
-                opacity: 0.6,
-                borderLeft: "1px solid var(--lam-border)",
+                color: "#64748B",
+                borderLeft: "1px solid #1E293B",
                 paddingLeft: "1.5rem",
               }}
             >
@@ -133,9 +129,8 @@ export default function Footer() {
               href="/staff-login"
               style={{
                 fontSize: "var(--text-xs)",
-                color: "var(--lam-silver-dim)",
-                opacity: 0.6,
-                borderLeft: "1px solid var(--lam-border)",
+                color: "#64748B",
+                borderLeft: "1px solid #1E293B",
                 paddingLeft: "1.5rem",
               }}
             >
@@ -175,10 +170,10 @@ function FooterColumn({
         style={{
           fontFamily: "var(--font-body)",
           fontSize: "var(--text-xs)",
-          fontWeight: 700,
-          letterSpacing: "0.12em",
+          fontWeight: 600,
+          letterSpacing: "0.08em",
           textTransform: "uppercase",
-          color: "var(--lam-mist)",
+          color: "#E2E8F0",
           marginBottom: "1rem",
         }}
       >
@@ -191,11 +186,11 @@ function FooterColumn({
               href={link.href}
               style={{
                 fontSize: "var(--text-sm)",
-                color: "var(--lam-silver)",
+                color: "#94A3B8",
                 transition: "color var(--transition-fast)",
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "var(--lam-gold)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "var(--lam-silver)"; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "#FFFFFF"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "#94A3B8"; }}
             >
               {link.label}
             </Link>
